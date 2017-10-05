@@ -1,4 +1,6 @@
-# kaaosgit serves as my public repository. It only contains some small scripts tools. 
+# kaaosgit 
+
+#kaaosgit serves as my public repository. It only contains some small scripts tools. 
 Larger projects are now, unfortunately, moved to private repositories for more in-depth development.
 
 Languages I use mostly are C, Python, Java, R and SQL. This repository contains mostly Python scripts.
