@@ -1,9 +1,9 @@
-# kaaosgit
+# kaaosgit serves as my public repository. It only contains some small scripts tools. 
+Larger projects are now, unfortunately, moved to private repositories for more in-depth development.
 
-Some personal projects with slight bias towards spatial data processing.
-I use (/try to learn) mostly Python, C, Java, R and SQL.
+Languages I use mostly are C, Python, Java, R and SQL. This repository contains mostly Python scripts.
 
 I'm a perfectionist by nature and love details and simple functionality, 
-but that doesn't mean you're not going to hit any errors in my code - use cautiously!
+but that doesn't mean you're not going to hit any errors in my code!
 
-MIT License, pick what you like!
+MIT License, feel free to pick what ever you like!
