@@ -1,21 +1,84 @@
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 #include <math.h>
 #include "geodesic.h"
 
+
+// Function prototypes/forward declarations:
+void print_menu(void);
+int int_input(const int lower, const int upper, const char *text);
+double double_input(const double lower, const double upper, const char *text);
+double double_input_no_check(const char *input_text, const char *error_text);
+void dms_to_dd(void);
+void dd_to_dms(void);
+void normal_gravity(void);
+void geodetic_to_cartesian(void);
+void cartesian_to_geodetic(void);
+void utm_scale_error_distance(void);
+void utm_scale_error_at_point(void);
+
+// Main method, run the program:
+int main(void) {
+	int ret;
+	const char *choose = "Choose operation by number: ";
+	
+	while(1){
+		print_menu();
+		ret = int_input(1, 8, choose);
+		switch(ret){
+			case 1:
+				system("clear");
+				dms_to_dd();
+				break;
+			case 2:
+				system("clear");
+				dd_to_dms();
+				break;
+			case 3:
+				system("clear");
+				normal_gravity();
+				break;
+			case 4:
+				system("clear");
+				geodetic_to_cartesian();
+				break;
+			case 5:
+				system("clear");
+				cartesian_to_geodetic();
+				break;
+			case 6:
+				system("clear");
+				utm_scale_error_distance();
+				break;
+			case 7:
+				system("clear");
+				utm_scale_error_at_point();
+				break;
+		}
+
+		if(ret == 8){
+			break;
+		}
+	}
+
+	return 0;
+}
+
 // Main menu printer:
-void print_menu(void){
+void print_menu(void) {
 	printf("\n1. DMS to DD.DDD \
 		\n2. DD.DDD to DMS \
 		\n3. Normal gravity on GRS80 ellipsoid \
 		\n4. Geodetic coordinates to 3D cartesian coordinates \
 		\n5. 3D Cartesian coordinates to geodetic coordinates \
-		\n6. Exit \
+		\n6. UTM Scale error by distance to central meridian \
+		\n7. UTM Scale error by point location (Lon/Lat) \
+		\n8. Exit \
 		\n");
 }
 
 // Integer input:
-int int_input(const int lower, const int upper, const char *text){
+int int_input(const int lower, const int upper, const char *text) {
 	char st[200];
 	int result;
 	int number;
@@ -33,7 +96,7 @@ int int_input(const int lower, const int upper, const char *text){
 }
 
 // Double input:
-double double_input(const double lower, const double upper, const char *text){
+double double_input(const double lower, const double upper, const char *text) {
 	char st[200];
 	int result;
 	double number;
@@ -51,7 +114,7 @@ double double_input(const double lower, const double upper, const char *text){
 }
 
 // Double input, no bounds:
-double double_input_no_check(const char *input_text, const char *error_text){
+double double_input_no_check(const char *input_text, const char *error_text) {
 	char st[200];
 	int result;
 	double number;
@@ -69,14 +132,14 @@ double double_input_no_check(const char *input_text, const char *error_text){
 }
 
 // DMS to DD.DDD converter:
-void dms_to_dd(void){
+void dms_to_dd(void) {
 	int dms_deg, dms_min;
 	char positive = 1;
 	double dms_sec;
 	double result;
 	char *input;
 
-	printf("\nConverts DMS (Degrees Minutes Seconds) to DD.DDD (Decimal degrees)\n");
+	printf("Converts DMS (Degrees Minutes Seconds) to DD.DDD (Decimal degrees)\n");
 
 	input = "Enter DMS degrees (integer): ";
 	dms_deg = int_input(-180, 180, input);
@@ -102,7 +165,7 @@ void dms_to_dd(void){
 }
 
 // DD.DDD to DMS converter:
-void dd_to_dms(void){
+void dd_to_dms(void) {
 	double difference = 0.0000000001; // For difference checking
 	double decimal_degs;
 	int deg;
@@ -110,7 +173,7 @@ void dd_to_dms(void){
 	double sec;
 	const char *text = "Enter decimal degrees: ";
 
-	printf("\nConverts DD.DDD (Decimal degrees) to DMS (Degrees Minutes Seconds)\n");
+	printf("Converts DD.DDD (Decimal degrees) to DMS (Degrees Minutes Seconds)\n");
 
 	decimal_degs = double_input(0, 180, text);
 
@@ -133,14 +196,14 @@ void dd_to_dms(void){
 }
 
 // Normal (theoretical) gravity on GRS80 ellipsoid:
-void normal_gravity(void){
+void normal_gravity(void) {
 	double latitude;
 	double lat_radians;
 	double sin_lat;
 	double g;
 	const char * text = "Enter latitude φ: ";
 
-	printf("\nCalculates normal gravity (theoretical gravity) on given latitude. GRS80 ellipsoid.\n");
+	printf("Calculates normal gravity (theoretical gravity) on given latitude. GRS80 ellipsoid.\n");
 
 	latitude = double_input(0, 90, text);
 	lat_radians = latitude * (M_PI / 180);
@@ -148,11 +211,11 @@ void normal_gravity(void){
 
 	g = 978032.67715 * (1 + (0.0052790414 * (pow(sin_lat, 2))) + (0.0000232718 * (pow(sin_lat, 4))) + (0.0000001262 * (pow(sin_lat, 6))) + (0.0000000007 * (pow(sin_lat, 8))));
 
-	printf("\nOn latitude φ = %f° normal gravity on GRS80 ellipsoid is %f mgal. Gravitational acceleration is %f m/s².\n", latitude, g, g / 100000);
+	printf("\nOn latitude φ = %f° normal gravity on GRS80 ellipsoid is %f mgal.\nGravitational acceleration is %f m/s².\n", latitude, g, g / 100000);
 }
 
 // Geodetic coordinates to 3D cartesian coordinates:
-void geodetic_to_cartesian(void){
+void geodetic_to_cartesian(void) {
 	// Define necessary GRS80 ellipsoid parameters:
 	const int a = 6378137; // Semimajor axis
 	const double b = 6356752.3141; // Semiminor axis
@@ -162,7 +225,7 @@ void geodetic_to_cartesian(void){
 	const char *heightinput = "Enter ellipsoidal height in meters (GRS80 ellipsoid): ";
 	const char *heightinputerror = "Invalid input. Enter height in meters: ";
 
-	printf("\nConverts geodetic coordinates (λ, φ, h) to cartesian (X, Y, Z) coordinates. \
+	printf("Converts geodetic coordinates (λ, φ, h) to 3D cartesian (X, Y, Z) coordinates. \
 		\nEnter degrees as decimal degrees and height as ellipsoidal height. North positive, East positive / GRS80 ellipsoid.\n");
 
 	double latitude = double_input(-90, 90, latitudeinput);
@@ -185,7 +248,7 @@ void geodetic_to_cartesian(void){
 }
 
 // 3D cartesian coordinates to geodetic coordinates:
-void cartesian_to_geodetic(void){
+void cartesian_to_geodetic(void) {
 	// Define necessary GRS80 ellipsoid parameters:
 	const int a = 6378137; // Semimajor axis
 	const double b = 6356752.3141; // Semiminor axis
@@ -196,7 +259,7 @@ void cartesian_to_geodetic(void){
 	const char *inputz = "Enter Z-coordinate in decimal meters: ";
 	const char *inputerror = "Invalid input. Enter coordinate in decimal meters: ";
 
-	printf("\nConverts cartesian (X, Y, Z) coordinates to geodetic (φ, λ, h) coordinates. \
+	printf("Converts 3D cartesian (X, Y, Z) coordinates to geodetic (φ, λ, h) coordinates. \
 		\nHeight h is ellipsoidal height above GRS80 ellipsoid. North positive, East positive.\n");
 
 	double xcoord = double_input_no_check(inputx, inputerror);
@@ -236,35 +299,35 @@ void cartesian_to_geodetic(void){
 	printf("Latitude φ: %f\nLongitude λ: %f\nEllipsoidal height h: %.3f\n", latitude, longitude, height);
 }
 
-// Main method, run the program:
-int main(void){
-	int ret;
-	const char *choose = "Choose operation by number: ";
-	
-	while(1){
-		print_menu();
-		ret = int_input(1, 6, choose);
-		switch(ret){
-			case 1:
-				dms_to_dd();
-				break;
-			case 2:
-				dd_to_dms();
-				break;
-			case 3:
-				normal_gravity();
-				break;
-			case 4:
-				geodetic_to_cartesian();
-				break;
-			case 5:
-				cartesian_to_geodetic();
-				break;
-		}
-		if(ret == 6){
-			break;
-		}
-	}
+// UTM scale error by distance
+void utm_scale_error_distance(void) {
+	const int a = 6378137; // Semimajor axis GRS80/WGS84 (identical)
+	const double k0 = 0.9996; // UTM Scale error at central meridian
+	printf("Calculates UTM scale error based on distance from the central meridian.\n");
+	double x = double_input(0.0, 1000000.0, "Enter distance from the central meridian in meters: ");
+	double k = k0 * cosh(x / (k0 * a));
 
-	return 0;
+	printf("Distance from the central meridian: %f km \nScale error (PPM): %d\n", x / 1000.0, (int)ceil((k - 1.0) * 1000000.0));
+}
+
+// UTM scale error by point location and central meridian
+void utm_scale_error_at_point(void) {
+	const double k0 = 0.9996; // UTM Scale error at central meridian
+	const char *latitudeinput = "Enter latitude φ in decimal degrees: ";
+	const char *longitudeinput = "Enter longitude λ in decimal degrees: ";
+	const char *meridianinput = "Enter longitude of central meridian in decimal degrees: ";
+	printf("Calculates UTM scale error based on point location (Lon/Lat) and a given central meridian.\n");
+	
+	double lat = double_input(-90, 90, latitudeinput);
+	double lon = double_input(-180, 180, longitudeinput);
+	double central_meridian = int_input(-180, 180, meridianinput);
+
+	double delta_lon = lon - central_meridian;
+
+	double delta_lon_radians = delta_lon * (M_PI / 180);
+	double lat_radians = lat * (M_PI / 180);
+
+	double k = k0 / (1 - (pow(sin(delta_lon_radians), 2) * pow(cos(lat_radians), 2)));
+
+	printf("Central meridian: %d°\nPoint: (Lon, Lat): (%f°, %f°) \nScale error (PPM): %d\n", (int)central_meridian, lon, lat, (int)ceil((k - 1.0) * 1000000.0));
 }
