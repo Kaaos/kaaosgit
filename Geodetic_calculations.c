@@ -20,6 +20,7 @@ void utm_scale_error_at_point(void);
 // Main method, run the program:
 int main(void) {
 	int ret;
+	system("clear");
 	const char *choose = "Choose operation by number: ";
 	
 	while(1){
@@ -50,13 +51,9 @@ int main(void) {
 				system("clear");
 				utm_scale_error_distance();
 				break;
-			case 7:
-				system("clear");
-				utm_scale_error_at_point();
-				break;
 		}
 
-		if(ret == 8){
+		if(ret == 7){
 			break;
 		}
 	}
@@ -66,14 +63,13 @@ int main(void) {
 
 // Main menu printer:
 void print_menu(void) {
-	printf("\n1. DMS to DD.DDD \
+	printf("1. DMS to DD.DDD \
 		\n2. DD.DDD to DMS \
 		\n3. Normal gravity on GRS80 ellipsoid \
 		\n4. Geodetic coordinates to 3D cartesian coordinates \
 		\n5. 3D Cartesian coordinates to geodetic coordinates \
-		\n6. UTM Scale error by distance to central meridian \
-		\n7. UTM Scale error by point location (Lon/Lat) \
-		\n8. Exit \
+		\n6. UTM Scale error by easting \
+		\n7. Exit \
 		\n");
 }
 
@@ -301,33 +297,12 @@ void cartesian_to_geodetic(void) {
 
 // UTM scale error by distance
 void utm_scale_error_distance(void) {
-	const int a = 6378137; // Semimajor axis GRS80/WGS84 (identical)
-	const double k0 = 0.9996; // UTM Scale error at central meridian
+	const double E0 = 500000.0; // UTM False easting
 	printf("Calculates UTM scale error based on distance from the central meridian.\n");
-	double x = double_input(0.0, 1000000.0, "Enter distance from the central meridian in meters: ");
-	double k = k0 * cosh(x / (k0 * a));
+	double E = double_input(0.0, 1000000.0, "Enter easting (in meters): ");
 
-	printf("Distance from the central meridian: %f km \nScale error (PPM): %d\n", x / 1000.0, (int)ceil((k - 1.0) * 1000000.0));
-}
+	// UTM scale error:
+    double scale_err = -0.0004 + (12.29 * pow(10, -15) * pow((E - E0), 2));
 
-// UTM scale error by point location and central meridian
-void utm_scale_error_at_point(void) {
-	const double k0 = 0.9996; // UTM Scale error at central meridian
-	const char *latitudeinput = "Enter latitude φ in decimal degrees: ";
-	const char *longitudeinput = "Enter longitude λ in decimal degrees: ";
-	const char *meridianinput = "Enter longitude of central meridian in decimal degrees: ";
-	printf("Calculates UTM scale error based on point location (Lon/Lat) and a given central meridian.\n");
-	
-	double lat = double_input(-90, 90, latitudeinput);
-	double lon = double_input(-180, 180, longitudeinput);
-	double central_meridian = int_input(-180, 180, meridianinput);
-
-	double delta_lon = lon - central_meridian;
-
-	double delta_lon_radians = delta_lon * (M_PI / 180);
-	double lat_radians = lat * (M_PI / 180);
-
-	double k = k0 / (1 - (pow(sin(delta_lon_radians), 2) * pow(cos(lat_radians), 2)));
-
-	printf("Central meridian: %d°\nPoint: (Lon, Lat): (%f°, %f°) \nScale error (PPM): %d\n", (int)central_meridian, lon, lat, (int)ceil((k - 1.0) * 1000000.0));
+	printf("\nEasting: %.3f (m)\nDistance from the central meridian: %.6f km \nScale error: %.2f PPM\n\n", E, (E - E0) / 1000.0, scale_err * 1000000);
 }
