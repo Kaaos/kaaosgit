@@ -4,7 +4,7 @@
 #include "geodesic.h"
 
 
-// Function prototypes/forward declarations:
+// Function prototypes (forward declarations):
 void print_menu(void);
 int int_input(const int lower, const int upper, const char *text);
 double double_input(const double lower, const double upper, const char *text);
@@ -17,16 +17,19 @@ void cartesian_to_geodetic(void);
 void utm_scale_error_distance(void);
 void utm_scale_error_at_point(void);
 
-// Main method, run the program:
+
+/* 
+*   Main method
+*/
 int main(void) {
     int ret;
     system("clear");
     const char *choose = "Choose operation by number: ";
     
-    while(1){
+    while (1) {
         print_menu();
         ret = int_input(1, 8, choose);
-        switch(ret){
+        switch (ret) {
             case 1:
                 system("clear");
                 dms_to_dd();
@@ -53,7 +56,7 @@ int main(void) {
                 break;
         }
 
-        if(ret == 7){
+        if (ret == 7) {
             break;
         }
     }
@@ -61,7 +64,10 @@ int main(void) {
     return 0;
 }
 
-// Main menu printer:
+
+/*
+*   Main menu printer
+*/
 void print_menu(void) {
     printf("1. DMS to DD.DDD \
         \n2. DD.DDD to DMS \
@@ -73,17 +79,20 @@ void print_menu(void) {
         \n");
 }
 
-// Integer input:
+
+/*
+*   Integer input
+*/
 int int_input(const int lower, const int upper, const char *text) {
     char st[200];
     int result;
     int number;
     printf("%s", text);
 
-    do{
+    do {
         fgets(st, sizeof(st), stdin);
         result = sscanf(st, "%d", &number);
-        if (result < 1 || (number < lower || number > upper)){
+        if (result < 1 || (number < lower || number > upper)) {
             printf("Invalid input. Enter a number between [%d, %d]: ", lower, upper);
         }
     }   while (result < 1 || (number < lower || number > upper));
@@ -91,17 +100,20 @@ int int_input(const int lower, const int upper, const char *text) {
     return number;
 }
 
-// Double input:
+
+/*
+*   Double input
+*/
 double double_input(const double lower, const double upper, const char *text) {
     char st[200];
     int result;
     double number;
     printf("%s", text);
 
-    do{
+    do {
         fgets(st, sizeof(st), stdin);
         result = sscanf(st, "%lf", &number);
-        if (result < 1 || (number < lower || number > upper)){
+        if (result < 1 || (number < lower || number > upper)) {
             printf("Invalid input. Enter a number between [%.1lf, %.1lf]: ", lower, upper);
         }
     }   while (result < 1 || (number < lower || number > upper));
@@ -109,17 +121,20 @@ double double_input(const double lower, const double upper, const char *text) {
     return number;
 }
 
-// Double input, no bounds:
+
+/*
+*   Double input, no bounds
+*/
 double double_input_no_check(const char *input_text, const char *error_text) {
     char st[200];
     int result;
     double number;
     printf("%s", input_text);
 
-    do{
+    do {
         fgets(st, sizeof(st), stdin);
         result = sscanf(st, "%lf", &number);
-        if (result < 1){
+        if (result < 1) {
             printf("%s", error_text);
         }
     }   while (result < 1);
@@ -127,7 +142,10 @@ double double_input_no_check(const char *input_text, const char *error_text) {
     return number;
 }
 
-// DMS to DD.DDD converter:
+
+/*
+*   DMS to DD.DDD converter
+*/
 void dms_to_dd(void) {
     int dms_deg, dms_min;
     char positive = 1;
@@ -146,23 +164,26 @@ void dms_to_dd(void) {
     input = "Enter DMS seconds (real): ";
     dms_sec = double_input(0, 60, input);
 
-    if(dms_deg < 0){
+    if (dms_deg < 0) {
         dms_deg *= -1;
         positive = 0;
     }
 
     result = (dms_deg + ((dms_min + (dms_sec / 60)) / 60));
 
-    if(positive == 0){
+    if (positive == 0) {
         result *= -1;
     }
 
     printf("\nResult in decimal degrees: %lf°\n", result);
 }
 
-// DD.DDD to DMS converter:
+
+/*
+*   DD.DDD to DMS converter
+*/
 void dd_to_dms(void) {
-    double difference = 0.0000000001; // For difference checking
+    double difference = 0.0000000001; // For difference checks
     double decimal_degs;
     int deg;
     int min;
@@ -177,12 +198,12 @@ void dd_to_dms(void) {
     min = floor(60 * (decimal_degs - deg));
     sec = 3600 * (decimal_degs - deg) - (min * 60);
 
-    if(fabs(sec - 60) < difference){
+    if (fabs(sec - 60) < difference) {
         min += 1;
         sec = 0;
     }
 
-    if(min == 60){
+    if (min == 60) {
         deg += 1;
         min = 0;
     }
@@ -191,7 +212,10 @@ void dd_to_dms(void) {
     printf("DMS: %d %d %lf\n", deg, min, sec);
 }
 
-// Normal (theoretical) gravity on GRS80 ellipsoid:
+
+/*
+*   Normal (theoretical) gravity on GRS80 ellipsoid
+*/
 void normal_gravity(void) {
     double latitude;
     double lat_radians;
@@ -205,12 +229,18 @@ void normal_gravity(void) {
     lat_radians = latitude * (M_PI / 180);
     sin_lat = sin(lat_radians);
 
-    g = 978032.67715 * (1 + (0.0052790414 * (pow(sin_lat, 2))) + (0.0000232718 * (pow(sin_lat, 4))) + (0.0000001262 * (pow(sin_lat, 6))) + (0.0000000007 * (pow(sin_lat, 8))));
+    g = 978032.67715 * (1 + (0.0052790414 * (pow(sin_lat, 2))) + 
+       (0.0000232718 * (pow(sin_lat, 4))) + (0.0000001262 * 
+        (pow(sin_lat, 6))) + (0.0000000007 * (pow(sin_lat, 8))));
 
-    printf("\nOn latitude φ = %f° normal gravity on GRS80 ellipsoid is %f mgal.\nGravitational acceleration is %f m/s².\n", latitude, g, g / 100000);
+    printf("\nOn latitude φ = %f° normal gravity on GRS80 ellipsoid is %f mgal.\n
+            Gravitational acceleration is %f m/s².\n", latitude, g, g / 100000);
 }
 
-// Geodetic coordinates to 3D cartesian coordinates:
+
+/*
+*   Geodetic coordinates to 3D cartesian coordinates
+*/
 void geodetic_to_cartesian(void) {
     // Define necessary GRS80 ellipsoid parameters:
     const int a = 6378137; // Semimajor axis
@@ -222,7 +252,8 @@ void geodetic_to_cartesian(void) {
     const char *heightinputerror = "Invalid input. Enter height in meters: ";
 
     printf("Converts geodetic coordinates (λ, φ, h) to 3D cartesian (X, Y, Z) coordinates. \
-        \nEnter degrees as decimal degrees and height as ellipsoidal height. North positive, East positive / GRS80 ellipsoid.\n");
+        \nEnter degrees as decimal degrees and height as ellipsoidal height. North positive, 
+        East positive / GRS80 ellipsoid.\n");
 
     double latitude = double_input(-90, 90, latitudeinput);
     double longitude = double_input(-180, 180, longitudeinput);
@@ -233,7 +264,8 @@ void geodetic_to_cartesian(void) {
     double cos_longitude = cos(longitude * (M_PI / 180));
     double sin_longitude = sin(longitude * (M_PI / 180));
 
-    double n = (pow(a, 2)) / (sqrt((pow(a, 2) * pow(cos_latitude, 2)) + (pow(b, 2) * pow(sin_latitude, 2))));
+    double n = (pow(a, 2)) / (sqrt((pow(a, 2) * pow(cos_latitude, 2)) + 
+               (pow(b, 2) * pow(sin_latitude, 2))));
 
     double xcoord = (n + height) * cos_latitude * cos_longitude;
     double ycoord = (n + height) * cos_latitude * sin_longitude;
@@ -243,7 +275,10 @@ void geodetic_to_cartesian(void) {
     printf("X = %.3f\nY = %.3f\nZ = %.3f\n", xcoord, ycoord, zcoord);
 }
 
-// 3D cartesian coordinates to geodetic coordinates:
+
+/*
+*   3D cartesian coordinates to geodetic coordinates
+*/
 void cartesian_to_geodetic(void) {
     // Define necessary GRS80 ellipsoid parameters:
     const int a = 6378137; // Semimajor axis
@@ -273,7 +308,8 @@ void cartesian_to_geodetic(void) {
     // 1st approximation of N:
     double cos_lat_radians = cos(lat_radians);
     double sin_lat_radians = sin(lat_radians);
-    double n = pow(a, 2) / sqrt((pow(a, 2) * pow(cos_lat_radians, 2)) + (pow(b, 2) * pow(sin_lat_radians, 2)));
+    double n = pow(a, 2) / sqrt((pow(a, 2) * pow(cos_lat_radians, 2)) + (pow(b, 2) * 
+               pow(sin_lat_radians, 2)));
 
     // 1st approximation of h:
     double height = (sqrt((pow(xcoord, 2) + pow(ycoord, 2)) / cos_lat_radians)) - n;
@@ -281,21 +317,27 @@ void cartesian_to_geodetic(void) {
     double guess_h = 0.0;
     int count = 0;
 
-    while(fabs(guess_h - height) > 0.0000000001){
+    while (fabs(guess_h - height) > 0.0000000001) {
         guess_h = height;
-        tan_latitude = zcoord / ((1 - (e2 * (n / (n + height)))) * sqrt(pow(xcoord, 2) + pow(ycoord, 2)));
+        tan_latitude = zcoord / ((1 - (e2 * (n / (n + height)))) * 
+                       sqrt(pow(xcoord, 2) + pow(ycoord, 2)));
         lat_radians = atan(tan_latitude);
         latitude = lat_radians * 180 / M_PI;
-        n = pow(a, 2) / sqrt(pow(a, 2) * pow(cos(lat_radians), 2) + pow(b, 2) * pow(sin(lat_radians), 2));
+        n = pow(a, 2) / sqrt(pow(a, 2) * pow(cos(lat_radians), 2) + pow(b, 2) * 
+            pow(sin(lat_radians), 2));
         height = ((sqrt(pow(xcoord, 2) + pow(ycoord, 2))) / cos(lat_radians)) - n;
         count++;
     }
 
     printf("Iterations completed: %d\n", count);
-    printf("Latitude φ: %f\nLongitude λ: %f\nEllipsoidal height h: %.3f\n", latitude, longitude, height);
+    printf("Latitude φ: %f\nLongitude λ: %f\nEllipsoidal height h: %.3f\n", 
+            latitude, longitude, height);
 }
 
-// UTM scale error by distance
+
+/*
+*   UTM scale error by distance
+*/
 void utm_scale_error_distance(void) {
     const double E0 = 500000.0; // UTM False easting
     printf("Calculates UTM scale error based on distance from the central meridian.\n");
@@ -304,5 +346,6 @@ void utm_scale_error_distance(void) {
     // UTM scale error:
     double scale_err = -0.0004 + (12.29 * pow(10, -15) * pow((E - E0), 2));
 
-    printf("\nEasting: %.3f (m)\nDistance from the central meridian: %.6f km \nScale error: %.2f PPM\n\n", E, (E - E0) / 1000.0, scale_err * 1000000);
+    printf("\nEasting: %.3f (m)\nDistance from the central meridian: %.6f km \n
+            Scale error: %.2f PPM\n\n", E, (E - E0) / 1000.0, scale_err * 1000000);
 }
