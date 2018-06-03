@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# NameError: name 'r_1h_time' is not defined --> lisätty riville 44
+
 # Prints latest weather observations of fmi Kumpula (Helsinki) (closest to me :) or Kaisaniemi weather station each time
 # terminal is launched. Get your fmi api key here: https://ilmatieteenlaitos.fi/rekisteroityminen-avoimen-datan-kayttajaksi
 # You also need to edit .bash_profile (on mac os x) to execute the script on terminal launch
@@ -8,6 +10,7 @@ import urllib2
 from datetime import datetime, timedelta
 from dateutil import tz
 import fnmatch
+import socket
 
 
 # Define time zones - UTC & local:
@@ -21,15 +24,15 @@ time_obs = time_iso[:-7] + "Z"  # Timestamp must be like "2016-09-21T17:30:45Z"
 
 
 # Create links to fetch datasets from server:
-kumpula_observation = "http://data.fmi.fi/fmi-apikey/INSERT_API_KEY_HERE/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&place=kumpula,helsinki&maxlocations=1&starttime=" + time_obs
-kaisaniemi_observation = "http://data.fmi.fi/fmi-apikey/INSERT_API_KEY_HERE/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&place=kaisaniemi,helsinki&maxlocations=1&starttime=" + time_obs
+kumpula_observation = "http://data.fmi.fi/fmi-apikey/APIKEY/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&place=kumpula,helsinki&maxlocations=1&starttime=" + time_obs
+kaisaniemi_observation = "http://data.fmi.fi/fmi-apikey/APIKEY/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&place=kaisaniemi,helsinki&maxlocations=1&starttime=" + time_obs
 
 
 # Try to get the data, if response is slow -> exit and continue with logon
 try:
     observation_kumpula = urllib2.urlopen(kumpula_observation, timeout=1)
     observation_kaisaniemi = urllib2.urlopen(kaisaniemi_observation, timeout=1)
-except urllib2.URLError, e:
+except Exception:
     print "Weather observation timeout, continuing."
     exit()
 
@@ -39,7 +42,7 @@ except urllib2.URLError, e:
 # If no observations from last hour (all "NaN"), program will print out 'nan' and no timestamp.
 utctime = datetime.strptime(time_obs, '%Y-%m-%dT%H:%M:%SZ')
 utctime = utctime.replace(tzinfo=utc_zone)
-naive_time = t2m_time = ws_10min_time = wg_10min_time = wd_10min_time = rh_time = td_time = ri_10min_time = snow_time = pressure_sealevel_time = visibility_time = cloudcov_time = wawa_time = utctime.astimezone(local_zone) + timedelta(hours=1)
+naive_time = r_1h_time = t2m_time = ws_10min_time = wg_10min_time = wd_10min_time = rh_time = td_time = ri_10min_time = snow_time = pressure_sealevel_time = visibility_time = cloudcov_time = wawa_time = utctime.astimezone(local_zone) + timedelta(hours=1)
 
 # Assign NA's to variables - if parsing is not successful, prints out 'nan'.
 t2m = ws_10min = wg_10min = wd_10min = rh = td = r_1h = ri_10min = snow = pressure_sealevel = visibility = cloudcov = wawa = float("NaN")
@@ -110,8 +113,12 @@ weather = {00: "Ei merkittäviä sääilmiöitä",
 
 
 # Read observation datasets to string arrays:
-obs_kumpula = observation_kumpula.read().splitlines()
-obs_kaisaniemi = observation_kaisaniemi.read().splitlines()
+try:
+    obs_kumpula = observation_kumpula.read().splitlines()
+    obs_kaisaniemi = observation_kaisaniemi.read().splitlines()
+except Exception:
+    print "Error reading weather observations, continuing."
+    exit()
 
 # Close server connections:
 observation_kumpula.close()
