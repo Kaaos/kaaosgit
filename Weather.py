@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# NameError: name 'r_1h_time' is not defined --> lisätty riville 44
-
 # Prints latest weather observations of fmi Kumpula (Helsinki) (closest to me :) or Kaisaniemi weather station each time
 # terminal is launched. Get your fmi api key here: https://ilmatieteenlaitos.fi/rekisteroityminen-avoimen-datan-kayttajaksi
 # You also need to edit .bash_profile (on mac os x) to execute the script on terminal launch
