@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# NameError: name 'r_1h_time' is not defined --> lisätty riville 44
+
 # Prints latest weather observations of fmi Kumpula (Helsinki) (closest to me :) or Kaisaniemi weather station each time
 # terminal is launched. Get your fmi api key here: https://ilmatieteenlaitos.fi/rekisteroityminen-avoimen-datan-kayttajaksi
 # You also need to edit .bash_profile (on mac os x) to execute the script on terminal launch
@@ -22,14 +24,14 @@ time_obs = time_iso[:-7] + "Z"  # Timestamp must be like "2016-09-21T17:30:45Z"
 
 
 # Create links to fetch datasets from server:
-kumpula_observation = "http://data.fmi.fi/fmi-apikey/APIKEY/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&place=kumpula,helsinki&maxlocations=1&starttime=" + time_obs
-kaisaniemi_observation = "http://data.fmi.fi/fmi-apikey/APIKEY/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&place=kaisaniemi,helsinki&maxlocations=1&starttime=" + time_obs
+kumpula_observation = "https://opendata.fmi.fi/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&place=kumpula,helsinki&maxlocations=1&starttime=" + time_obs
+kaisaniemi_observation = "https://opendata.fmi.fi/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&place=kaisaniemi,helsinki&maxlocations=1&starttime=" + time_obs
 
 
 # Try to get the data, if response is slow -> exit and continue with logon
 try:
-    observation_kumpula = urllib2.urlopen(kumpula_observation, timeout=1)
-    observation_kaisaniemi = urllib2.urlopen(kaisaniemi_observation, timeout=1)
+    observation_kumpula = urllib2.urlopen(kumpula_observation, timeout = 1.5)
+    observation_kaisaniemi = urllib2.urlopen(kaisaniemi_observation, timeout = 1.5)
 except Exception:
     print "Weather observation timeout, continuing."
     exit()
