@@ -1,55 +1,175 @@
 # -*- coding: utf-8 -*-
 
 # Prints latest weather observations of fmi Kumpula (Helsinki) (closest to me :) or Kaisaniemi weather station each time
-# terminal is launched. Get your fmi api key here: https://ilmatieteenlaitos.fi/rekisteroityminen-avoimen-datan-kayttajaksi
-# You also need to edit .bash_profile (on mac os x) to execute the script on terminal launch
+# terminal is launched. 
+# You need to edit .bash_profile (on mac os) to execute the script on terminal launch
 
-import urllib2
+
+# Imports
+import urllib.request
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from dateutil import tz
+import pytz
 import fnmatch
-import socket
 
 
-# Define time zones - UTC & local:
-utc_zone = tz.tzutc()
-local_zone = tz.tzlocal()
+# Get urls to fetch the data from
+def get_connection_urls():
+    utc_zone   = tz.tzutc()
+    local_zone = tz.tzlocal()
 
-# Time formatting for data requests:
-time = datetime.utcnow() + timedelta(hours=-1.17)  # Last hour
-time_iso = time.isoformat()  # To ISO format
-time_obs = time_iso[:-7] + "Z"  # Timestamp must be like "2016-09-21T17:30:45Z"
+    time = datetime.utcnow() + timedelta(hours = -1.17)     # Last hour
+    time_iso = time.isoformat()                             # To ISO format
+    time_obs = time_iso[:-7] + "Z"                          # Timestamp must be like "2016-09-21T17:30:45Z"
 
+    kumpula_observation    = "https://opendata.fmi.fi/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&place=kumpula,helsinki&maxlocations=1&starttime="     + time_obs
+    kaisaniemi_observation = "https://opendata.fmi.fi/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&place=kaisaniemi,helsinki&maxlocations=1&starttime="  + time_obs
 
-# Create links to fetch datasets from server:
-kumpula_observation = "https://opendata.fmi.fi/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&place=kumpula,helsinki&maxlocations=1&starttime=" + time_obs
-kaisaniemi_observation = "https://opendata.fmi.fi/wfs?request=getFeature&storedquery_id=fmi::observations::weather::timevaluepair&place=kaisaniemi,helsinki&maxlocations=1&starttime=" + time_obs
+    return {'Kumpula': kumpula_observation, 'Kaisaniemi': kaisaniemi_observation}
 
 
 # Try to get the data, if response is slow -> exit and continue with logon
-try:
-    observation_kumpula = urllib2.urlopen(kumpula_observation, timeout = 1.5)
-    observation_kaisaniemi = urllib2.urlopen(kaisaniemi_observation, timeout = 1.5)
-except Exception:
-    print "Weather observation timeout, continuing."
-    exit()
+def fetch_data(urls):
+    try:
+        kumpula = urllib.request.urlopen(urls['Kumpula'], timeout = 1.5)
+        kaisaniemi = urllib.request.urlopen(urls['Kaisaniemi'], timeout = 1.5)
+        obs_kumpula = kumpula.read()
+        obs_kaisaniemi = kaisaniemi.read()
+    except Exception:
+        print("Weather observation timeout, continuing.")
+        exit()
+    finally:
+        kumpula.close()     # Close server connections
+        kaisaniemi.close()
+
+    # Decide primary observation location based on response length and number of NA's:
+    #   The reason behind this is that the Kumpula station seems to be non-functional every now and then
+    #   and only returns a few rows of data. Kaisaniemi seems to operate more reliably and constantly.
+    #   I still slightly prefer Kumpula due to its location:
+
+    na_kumpula = len(fnmatch.filter(str(obs_kumpula), '*NaN*'))
+    na_kaisaniemi = len(fnmatch.filter(str(obs_kaisaniemi), '*NaN*'))
+
+    if(len(obs_kumpula) >= len(obs_kaisaniemi) and na_kumpula <= na_kaisaniemi):
+        obs = obs_kumpula
+        station = "Kumpula"
+    else:
+        obs = obs_kaisaniemi
+        station = "Kaisaniemi"
+
+    return (station, obs)   # Return selected station and its raw gml data
 
 
-# Special case handling - If all observations from last hour are 'nan':
-# Set base 'naive' timestamp to all variables to avoid errors from undefined variables.
-# If no observations from last hour (all "NaN"), program will print out 'nan' and no timestamp.
-utctime = datetime.strptime(time_obs, '%Y-%m-%dT%H:%M:%SZ')
-utctime = utctime.replace(tzinfo=utc_zone)
-naive_time = r_1h_time = t2m_time = ws_10min_time = wg_10min_time = wd_10min_time = rh_time = td_time = ri_10min_time = snow_time = pressure_sealevel_time = visibility_time = cloudcov_time = wawa_time = utctime.astimezone(local_zone) + timedelta(hours=1)
+# Parse GML data to a dictionary:
+def parse_data(data, local_tz):
+    root = ET.fromstring(data)  # XML/GML parser root
+    ret  = {}                   # Empty dictionary for observation variables
 
-# Assign NA's to variables - if parsing is not successful, prints out 'nan'.
-t2m = ws_10min = wg_10min = wd_10min = rh = td = r_1h = ri_10min = snow = pressure_sealevel = visibility = cloudcov = wawa = float("NaN")
+    # Get observations:
+    variables = root.findall('.//wml2:MeasurementTimeseries', namespaces)
+    for i in range(len(variables)):
+        observations = variables[i].findall('.//wml2:MeasurementTVP', namespaces)   # Find all time-value pairs
+        varname = str(list(variables[i].attrib.values())[0].split('-')[-1])         # Get variable name
+        for i in observations:
+            if (i[1].text != 'NaN'):                                                # Don't save missing data
+                time = datetime.strptime(i[0].text, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo = pytz.UTC)
+                value = float(i[1].text)
+                ret[varname] = [time, value]                                        # Save observation time and value
+
+    #printvars(ret)                                                                 # Debugging call
+
+    # Get latest timestamp of observations:
+    timestamps = []
+    temp = list(ret.values())   # All observation time-value pairs
+
+    # Put all timestamps in a list (use local time zone)
+    for i in range(len(temp)):
+        timestamps.append(temp[i][0].astimezone(local_tz))
+    latest_observation = max(timestamps)    # Find maximum value (= latest observation time)
+
+    return (ret, latest_observation)        # Return data dictionary and latest timestamp
+
+
+# Function to get older observations timestamps in a preferred form:
+def gettime(stamp, latest_observation):
+    if (stamp < latest_observation):
+        return "(" + stamp.strftime("%H:%M") + ")"
+    return ""
+
+
+# Function for debugging purposes, prints the contents of the data dictionary:
+def printvars(variable_dict):
+    for x in variable_dict:
+        print(x)
+        for y in variable_dict[x]:
+            print("    ", y)
+
+
+# Function to print observations on the screen:
+def print_observations(vlist, latest, station):
+    print("\n%s, Helsinki %s" % (station, latest.strftime("%d/%m/%Y %H:%M")))
+
+    print("Lämpötila: %6s °C %8s  Tuulen nopeus: %4s m/s %7s   Paine: %10s hPa %7s" % 
+        ('--' if ('t2m'      not in vlist) else str(vlist['t2m'][1]),      gettime(vlist['t2m'][0], latest)         if 't2m'      in vlist else '',
+         '--' if ('ws_10min' not in vlist) else str(vlist['ws_10min'][1]), gettime(vlist['ws_10min'][0], latest)    if 'ws_10min' in vlist else '',
+         '--' if ('p_sea'    not in vlist) else str(vlist['p_sea'][1]),    gettime(vlist['p_sea'][0], latest)       if 'p_sea'    in vlist else ''))
+
+    print("Kastepiste: %5s °C %7s   Puuska: %11s m/s %7s   Näkyvyys: %7s km %8s" % 
+        ('--' if ('td'       not in vlist) else str(vlist['td'][1]),         gettime(vlist['td'][0], latest)        if 'td'       in vlist else '',
+         '--' if ('wg_10min' not in vlist) else str(vlist['wg_10min'][1]),   gettime(vlist['wg_10min'][0], latest)  if 'wg_10min' in vlist else '', 
+         '--' if ('vis'      not in vlist) else str(vlist['vis'][1] / 1000), gettime(vlist['vis'][0], latest)       if 'vis'      in vlist else ''))
+
+    print("Kosteus: %8s %% %8s   Tuulen suunta: %4s ° %9s   Pilvisyys: %4s/8 %11s" % 
+        ('--' if ('rh'       not in vlist) else str(int(vlist['rh'][1])),       gettime(vlist['rh'][0], latest)         if 'rh'       in vlist else '',
+         '--' if ('wd_10min' not in vlist) else str(int(vlist['wd_10min'][1])), gettime(vlist['wd_10min'][0], latest)   if 'wd_10min' in vlist else '',
+         '--' if ('n_man'    not in vlist) else str(int(vlist['n_man'][1])),    gettime(vlist['n_man'][0], latest)      if 'n_man'    in vlist else ''))
+
+    # Print precipitation only if precipitation > 0:
+    if ('r_1h' in vlist or 'ri_10min' in vlist):
+        if (vlist['r_1h'][1] > 0.001 or vlist['ri_10min'][1] > 0.001):
+            print("\nEdeltävän tunnin sademäärä: %10.1f mm %s" % (vlist['r_1h'][1], gettime(vlist['r_1h'][0]), latest))
+            print("Edeltävän 10 minuutin sademäärä: %5.1f mm %s" % (vlist['ri_10min'][1], gettime(vlist['ri_10min'][0]), latest))
+
+    # Print snow depth only if snow depth > 0:
+    if ('snow_aws' in vlist and vlist['snow_aws'][1] > 0):
+        print("\nLumen syvyys: %5.1f cm %s" % (vlist['snow_aws'][1], gettime(vlist['snow_aws'][0], latest)))
+
+    # Print weather type:
+    if ('wawa' in vlist):
+        print("\n%s %7s\n" % (weather[int(vlist['wawa'][1])], gettime(vlist['wawa'][0], latest)))
+    else:
+        print("\nSäätyyppiä ei voitu määrittää (tieto puuttuu)\n")
+
+
+
+# # # # # # # # # # #
+#       Main:       #
+# # # # # # # # # # #
+
+
+# Define XML/GML namespaces:
+namespaces = {"wfs"     : "http://www.opengis.net/wfs/2.0",
+              "xsi"     : "http://www.w3.org/2001/XMLSchema-instance",
+              "xlink"   : "http://www.w3.org/1999/xlink",
+              "om"      : "http://www.opengis.net/om/2.0",
+              "ompr"    : "http://inspire.ec.europa.eu/schemas/ompr/3.0",
+              "omso"    : "http://inspire.ec.europa.eu/schemas/omso/3.0",
+              "gml"     : "http://www.opengis.net/gml/3.2",
+              "gmd"     : "http://www.isotc211.org/2005/gmd",
+              "gco"     : "http://www.isotc211.org/2005/gco",
+              "swe"     : "http://www.opengis.net/swe/2.0",
+              "gmlcov"  : "http://www.opengis.net/gmlcov/1.0",
+              "sam"     : "http://www.opengis.net/sampling/2.0",
+              "sams"    : "http://www.opengis.net/samplingSpatial/2.0",
+              "wml2"    : "http://www.opengis.net/waterml/2.0",
+              "target"  : "http://xml.fmi.fi/namespace/om/atmosphericfeatures/1.0"}
 
 
 # Define weather types (wawa):
-weather = {00: "Ei merkittäviä sääilmiöitä",
-           04: "Auerta, savua tai ilmassa leijuvaa pölyä ja näkyvyys vähintään 1 km",
-           05: "Auerta, savua tai ilmassa leijuvaa pölyä ja näkyvyys alle 1 km",
+weather = {0:  "Ei merkittäviä sääilmiöitä",
+           4:  "Auerta, savua tai ilmassa leijuvaa pölyä ja näkyvyys vähintään 1 km",
+           5:  "Auerta, savua tai ilmassa leijuvaa pölyä ja näkyvyys alle 1 km",
            10: "Utua",
 
            # Koodeja 20-25 käytetään, kun on ollut sadetta tai sumua edellisen tunnin aikana mutta ei enää havaintohetkellä:
@@ -66,11 +186,9 @@ weather = {00: "Ei merkittäviä sääilmiöitä",
            32: "Sumua tai jääsumua, joka on ohentunut edellisen tunnin aikana",
            33: "Sumua tai jääsumua, jonka tiheydessä ei ole tapahtunut merkittäviä muutoksia edellisen tunnin aikana",
            34: "Sumua tai jääsumua, joka on muodostunut tai tullut sakeammaksi edellisen tunnin aikana",
-
            40: "Sadetta (olomuoto määrittelemätön)",
            41: "Heikkoa tai kohtalaista sadetta (olomuoto määrittelemätön)",
            42: "Kovaa sadetta (olomuoto määrittelemätön)",
-
            50: "Tihkusadetta",
            51: "Heikkoa tihkua, joka ei ole jäätävää",
            52: "Kohtalaista tihkua, joka ei ole jäätävää",
@@ -78,7 +196,6 @@ weather = {00: "Ei merkittäviä sääilmiöitä",
            54: "Jäätävää heikkoa tihkua",
            55: "Jäätävää kohtalaista tihkua",
            56: "Jäätävää kovaa tihkua",
-
            60: "Vesisadetta",
            61: "Heikkoa vesisadetta, joka ei ole jäätävää",
            62: "Kohtalaista vesisadetta, joka ei ole jäätävää",
@@ -88,7 +205,6 @@ weather = {00: "Ei merkittäviä sääilmiöitä",
            66: "Jäätävää kovaa vesisadetta",
            67: "Heikkoa lumensekaista vesisadetta tai tihkua (räntää)",
            68: "Kohtalaista tai kovaa lumensekaista vesisadetta tai tihkua (räntää)",
-
            70: "Lumisadetta",
            71: "Heikkoa lumisadetta",
            72: "Kohtalaista lumisadetta",
@@ -98,7 +214,6 @@ weather = {00: "Ei merkittäviä sääilmiöitä",
            76: "Kovaa jääjyväsadetta",
            77: "Lumijyväsiä",
            78: "Jääkiteitä",
-
            80: "Kuuroja tai ajoittaista vesisadetta",
            81: "Heikkoja vesikuuroja",
            82: "Kohtalaisia vesikuuroja",
@@ -110,275 +225,7 @@ weather = {00: "Ei merkittäviä sääilmiöitä",
            89: "Raekuuroja mahdollisesti yhdessä vesi- tai räntäsateen kanssa"}
 
 
-# Read observation datasets to string arrays:
-try:
-    obs_kumpula = observation_kumpula.read().splitlines()
-    obs_kaisaniemi = observation_kaisaniemi.read().splitlines()
-except Exception:
-    print "Error reading weather observations, continuing."
-    exit()
-
-# Close server connections:
-observation_kumpula.close()
-observation_kaisaniemi.close()
-
-
-# Count NA's of observation sites:
-na_kumpula = len(fnmatch.filter(obs_kumpula, '*NaN*'))
-na_kaisaniemi = len(fnmatch.filter(obs_kaisaniemi, '*NaN*'))
-
-# Decide primary observation location based on response length and number of NA's:
-#   The reason behind this is that the Kumpula station seems to be non-functional every now and then
-#   and only returns a few rows of data. Kaisaniemi seems to operate more reliably and constantly.
-#   I still slightly prefer Kumpula, due to its location:
-if(len(obs_kumpula) >= len(obs_kaisaniemi) and na_kumpula <= na_kaisaniemi):
-    obs = obs_kumpula
-    station = "Kumpula"
-else:
-    obs = obs_kaisaniemi
-    station = "Kaisaniemi"
-
-
-# Get latest observations from the data:
-#   Loop trough the data (once -> efficient):
-i = 0  # Index
-
-while(i < len(obs)):
-
-    # Skip rows with no relevant information:
-    if("MeasurementTimeseries" not in obs[i]):
-        i += 1
-        continue
-
-    # Temperature at 2m level:
-    if("t2m" in obs[i]):
-        while(True):
-            i += 1
-            if("value" in obs[i]):
-                ret = obs[i].split('>')[1].split('<')[0]
-                if(ret != "NaN"):
-                    t2m = float(ret)
-                    ret_time = obs[i - 1].split('>')[1].split('<')[0]
-                    utctime = datetime.strptime(ret_time, '%Y-%m-%dT%H:%M:%SZ')
-                    utc = utctime.replace(tzinfo=utc_zone)
-                    t2m_time = utc.astimezone(local_zone)
-            elif("MeasurementTimeseries" in obs[i]):
-                break
-
-    # Wind speed (10 min average):
-    elif("ws_10min" in obs[i]):
-        while(True):
-            i += 1
-            if("value" in obs[i]):
-                ret = obs[i].split('>')[1].split('<')[0]
-                if(ret != "NaN"):
-                    ws_10min = float(ret)
-                    ret_time = obs[i - 1].split('>')[1].split('<')[0]
-                    utctime = datetime.strptime(ret_time, '%Y-%m-%dT%H:%M:%SZ')
-                    utc = utctime.replace(tzinfo=utc_zone)
-                    ws_10min_time = utc.astimezone(local_zone)
-            elif("MeasurementTimeseries" in obs[i]):
-                break
-
-    # Wind speed, gusts (10 min):
-    elif("wg_10min" in obs[i]):
-        while(True):
-            i += 1
-            if("value" in obs[i]):
-                ret = obs[i].split('>')[1].split('<')[0]
-                if(ret != "NaN"):
-                    wg_10min = float(ret)
-                    ret_time = obs[i - 1].split('>')[1].split('<')[0]
-                    utctime = datetime.strptime(ret_time, '%Y-%m-%dT%H:%M:%SZ')
-                    utc = utctime.replace(tzinfo=utc_zone)
-                    wg_10min_time = utc.astimezone(local_zone)
-            elif("MeasurementTimeseries" in obs[i]):
-                break
-
-    # Wind direction (10 min mean):
-    elif("wd_10min" in obs[i]):
-        while(True):
-            i += 1
-            if("value" in obs[i]):
-                ret = obs[i].split('>')[1].split('<')[0]
-                if(ret != "NaN"):
-                    wd_10min = float(ret)
-                    ret_time = obs[i - 1].split('>')[1].split('<')[0]
-                    utctime = datetime.strptime(ret_time, '%Y-%m-%dT%H:%M:%SZ')
-                    utc = utctime.replace(tzinfo=utc_zone)
-                    wd_10min_time = utc.astimezone(local_zone)
-            elif("MeasurementTimeseries" in obs[i]):
-                break
-
-    # Relative humidity:
-    elif("rh" in obs[i]):
-        while(True):
-            i += 1
-            if("value" in obs[i]):
-                ret = obs[i].split('>')[1].split('<')[0]
-                if(ret != "NaN"):
-                    rh = float(ret)
-                    ret_time = obs[i - 1].split('>')[1].split('<')[0]
-                    utctime = datetime.strptime(ret_time, '%Y-%m-%dT%H:%M:%SZ')
-                    utc = utctime.replace(tzinfo=utc_zone)
-                    rh_time = utc.astimezone(local_zone)
-            elif("MeasurementTimeseries" in obs[i]):
-                break
-
-    # Dew point:
-    elif("td" in obs[i]):
-        while(True):
-            i += 1
-            if("value" in obs[i]):
-                ret = obs[i].split('>')[1].split('<')[0]
-                if(ret != "NaN"):
-                    td = float(ret)
-                    ret_time = obs[i - 1].split('>')[1].split('<')[0]
-                    utctime = datetime.strptime(ret_time, '%Y-%m-%dT%H:%M:%SZ')
-                    utc = utctime.replace(tzinfo=utc_zone)
-                    td_time = utc.astimezone(local_zone)
-            elif("MeasurementTimeseries" in obs[i]):
-                break
-
-    # Total precipitation (last hour):
-    elif("r_1h" in obs[i]):
-        while(True):
-            i += 1
-            if("value" in obs[i]):
-                ret = obs[i].split('>')[1].split('<')[0]
-                if(ret != "NaN"):
-                    r_1h = float(ret)
-                    ret_time = obs[i - 1].split('>')[1].split('<')[0]
-                    utctime = datetime.strptime(ret_time, '%Y-%m-%dT%H:%M:%SZ')
-                    utc = utctime.replace(tzinfo=utc_zone)
-                    r_1h_time = utc.astimezone(local_zone)
-            elif("MeasurementTimeseries" in obs[i]):
-                break
-
-    # Rain intensity (last 10 minutes):
-    elif("ri_10min" in obs[i]):
-        while(True):
-            i += 1
-            if("value" in obs[i]):
-                ret = obs[i].split('>')[1].split('<')[0]
-                if(ret != "NaN"):
-                    ri_10min = float(ret)
-                    ret_time = obs[i - 1].split('>')[1].split('<')[0]
-                    utctime = datetime.strptime(ret_time, '%Y-%m-%dT%H:%M:%SZ')
-                    utc = utctime.replace(tzinfo=utc_zone)
-                    ri_10min_time = utc.astimezone(local_zone)
-            elif("MeasurementTimeseries" in obs[i]):
-                break
-
-    # Snow depth:
-    elif("snow_aws" in obs[i]):
-        while(True):
-            i += 1
-            if("value" in obs[i]):
-                ret = obs[i].split('>')[1].split('<')[0]
-                if(ret != "NaN"):
-                    snow = float(ret)
-                    ret_time = obs[i - 1].split('>')[1].split('<')[0]
-                    utctime = datetime.strptime(ret_time, '%Y-%m-%dT%H:%M:%SZ')
-                    utc = utctime.replace(tzinfo=utc_zone)
-                    snow_time = utc.astimezone(local_zone)
-            elif("MeasurementTimeseries" in obs[i]):
-                break
-
-    # Pressure (at sea level):
-    elif("p_sea" in obs[i]):
-        while(True):
-            i += 1
-            if("value" in obs[i]):
-                ret = obs[i].split('>')[1].split('<')[0]
-                if(ret != "NaN"):
-                    pressure_sealevel = float(ret)
-                    ret_time = obs[i - 1].split('>')[1].split('<')[0]
-                    utctime = datetime.strptime(ret_time, '%Y-%m-%dT%H:%M:%SZ')
-                    utc = utctime.replace(tzinfo=utc_zone)
-                    pressure_sealevel_time = utc.astimezone(local_zone)
-            elif("MeasurementTimeseries" in obs[i]):
-                break
-
-    # Visibility:
-    elif("vis" in obs[i]):
-        while(True):
-            i += 1
-            if("value" in obs[i]):
-                ret = obs[i].split('>')[1].split('<')[0]
-                if(ret != "NaN"):
-                    visibility = float(ret)
-                    ret_time = obs[i - 1].split('>')[1].split('<')[0]
-                    utctime = datetime.strptime(ret_time, '%Y-%m-%dT%H:%M:%SZ')
-                    utc = utctime.replace(tzinfo=utc_zone)
-                    visibility_time = utc.astimezone(local_zone)
-            elif("MeasurementTimeseries" in obs[i]):
-                break
-
-    # Cloud cover:
-    elif("n_man" in obs[i]):
-        while(True):
-            i += 1
-            if("value" in obs[i]):
-                ret = obs[i].split('>')[1].split('<')[0].split('.')[0]
-                if(ret != "NaN"):
-                    cloudcov = int(ret)
-                    ret_time = obs[i - 1].split('>')[1].split('<')[0]
-                    utctime = datetime.strptime(ret_time, '%Y-%m-%dT%H:%M:%SZ')
-                    utc = utctime.replace(tzinfo=utc_zone)
-                    cloudcov_time = utc.astimezone(local_zone)
-            elif("MeasurementTimeseries" in obs[i]):
-                break
-
-    # WAWA (weather type):
-    elif("wawa" in obs[i]):
-        while(True):
-            i += 1
-            if("value" in obs[i]):
-                ret = obs[i].split('>')[1].split('<')[0].split('.')[0]
-                if(ret != "NaN"):
-                    wawa = int(ret)
-                    ret_time = obs[i - 1].split('>')[1].split('<')[0]
-                    utctime = datetime.strptime(ret_time, '%Y-%m-%dT%H:%M:%SZ')
-                    utc = utctime.replace(tzinfo=utc_zone)
-                    wawa_time = utc.astimezone(local_zone)
-            elif("MeasurementTimeseries" in obs[i]):
-                break
-
-    i += 1  # Update index
-
-
-# Get timestamp of newest observation:
-newest = max(t2m_time, ws_10min_time, wg_10min_time, wd_10min_time, rh_time, td_time, ri_10min_time, snow_time,
-             pressure_sealevel_time, visibility_time, cloudcov_time, wawa_time, r_1h_time)
-
-
-# Define function to return the timestamps of older observations:
-def gettime(timevar):
-    if(timevar == naive_time):  # No observations in the last hour
-        return ''
-    elif(timevar != newest):  # Older observation
-        return '(' + timevar.strftime('%H:%M') + ')'
-    return ''
-
-
-# Print observations on the screen:
-print "\n%s, Helsinki  %s" % (station, newest.strftime("%d/%m/%Y  %H:%M"))
-print "Lämpötila: %6.1f °C %8s  Tuulen nopeus: %4.1f m/s %7s   Paine: %10.1f hPa %3s%7s" % (t2m, gettime(t2m_time), ws_10min, gettime(ws_10min_time), pressure_sealevel, "(K)" if pressure_sealevel > 1013.25 else "(M)", gettime(pressure_sealevel_time))
-print "Kastepiste: %5.1f °C %7s   Puuska: %11.1f m/s %7s   Näkyvyys: %7.1f km %8s" % (td, gettime(td_time), wg_10min, gettime(wg_10min_time), (visibility / 1000), gettime(visibility_time))
-print "Kosteus: %8d %% %8s   Tuulen suunta: %4d ° %9s   Pilvisyys: %4d/8 %11s" % (rh, gettime(rh_time), wd_10min, gettime(wd_10min_time), cloudcov, gettime(cloudcov_time))
-
-# Print precipitation only if precipitation > 0:
-if(r_1h > 0.001 or ri_10min > 0.001):
-    print "\nEdeltävän tunnin sademäärä: %10.1f mm %s" % (r_1h, gettime(r_1h_time))
-    print "Edeltävän 10 minuutin sademäärä: %5.1f mm %s" % (ri_10min, gettime(ri_10min_time))
-
-# Print snow depth only if snow depth > 0:
-if(snow > 0):
-    print "\nLumen syvyys: %5.1f cm %s" % (snow, gettime(snow_time))
-
-# Print weather type:
-if(wawa in weather):
-    print "\n%s %7s\n" % (weather[wawa], gettime(wawa_time))
-else:
-    print "\nSäätyyppiä ei voitu määrittää (tieto puuttuu)\n"
+urls          = get_connection_urls()
+station, data = fetch_data(urls)
+vlist, latest = parse_data(data, tz.tzlocal())
+print_observations(vlist, latest, station)
