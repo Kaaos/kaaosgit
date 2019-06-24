@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-
+# Python3
 # Prints latest weather observations of fmi Kumpula (Helsinki) (closest to me :) or Kaisaniemi weather station each time
 # terminal is launched. 
 # You need to edit .bash_profile (on mac os) to execute the script on terminal launch
@@ -34,11 +33,15 @@ def fetch_data(urls):
     try:
         kumpula = urllib.request.urlopen(urls['Kumpula'], timeout = 1.5)
         kaisaniemi = urllib.request.urlopen(urls['Kaisaniemi'], timeout = 1.5)
-        obs_kumpula = kumpula.read()
-        obs_kaisaniemi = kaisaniemi.read()
     except Exception:
         print("Weather observation timeout, continuing.")
         exit()
+
+    try:
+        obs_kumpula = kumpula.read()
+        obs_kaisaniemi = kaisaniemi.read()
+    except Exception:
+        print("Reading weather observation data failed, continuing.")
     finally:
         kumpula.close()     # Close server connections
         kaisaniemi.close()
