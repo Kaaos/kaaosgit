@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # Gets realtime data for nearby tram stops
 
 import requests
@@ -24,7 +22,7 @@ query = '{                                                                      
             alertDescriptionText                                                                                \
         }                                                                                                       \
     }                                                                                                           \
-    stops(ids: ["HSL:1220411", "HSL:1220410", "HSL:1220417", "HSL:1220416"]) {                                  \
+    stops(ids: ["HSL:1220404", "HSL:1220403", "HSL:1220417", "HSL:1220416"]) {                                  \
         name                                                                                                    \
         code                                                                                                    \
         stoptimesWithoutPatterns {                                                                              \
@@ -65,9 +63,6 @@ while True:
 #  Print results:  #
 ####################
 
-# Define directions of travel:
-stop_directions = {"0266": "Keskustaan", "0320": "Keskustaan", "0319": "Arabiaan", "0265": "Pasilaan / Käpylään"}
-
 # Print to terminal:
 print('Seuraavat sporat lähipysäkeiltä:')
 
@@ -75,7 +70,6 @@ for i in [0, 2]:  # 0 & 2 = Stop group indexes, indexes to start a new print gro
     # Print stop information:
     print()
     print('%s' % (data['data']['stops'][i]['name']))
-    print('%s:%51s%s:' % (stop_directions[data['data']['stops'][i]['code']], ' ', stop_directions[data['data']['stops'][i + 1]['code']]))
 
     # Print times:
     for j in range(len(data['data']['stops'][i]['stoptimesWithoutPatterns'])):
@@ -90,6 +84,9 @@ for i in [0, 2]:  # 0 & 2 = Stop group indexes, indexes to start a new print gro
 print()
 
 # Print possible alerts for routes above:
+if (len(data['data']['routes']) > 0):
+    print("\nPoikkeustiedotteet:\n")
+
 for i in range(len(data['data']['routes'])):
     for j in data['data']['routes'][i]['alerts']:
-        print('%s%2s%s%s' % ('Linja ', data['data']['routes'][i]['shortName'], ':\n', j['alertDescriptionText']))
+        print('\t%s%2s%s%s\n' % ('Linja ', data['data']['routes'][i]['shortName'], ':\n\t\t', j['alertDescriptionText']))

@@ -150,7 +150,6 @@ def print_observations(vlist, latest, station):
 #       Main:       #
 # # # # # # # # # # #
 
-
 # Define XML/GML namespaces:
 namespaces = {"wfs"     : "http://www.opengis.net/wfs/2.0",
               "xsi"     : "http://www.w3.org/2001/XMLSchema-instance",
@@ -167,7 +166,6 @@ namespaces = {"wfs"     : "http://www.opengis.net/wfs/2.0",
               "sams"    : "http://www.opengis.net/samplingSpatial/2.0",
               "wml2"    : "http://www.opengis.net/waterml/2.0",
               "target"  : "http://xml.fmi.fi/namespace/om/atmosphericfeatures/1.0"}
-
 
 # Define weather types (wawa):
 weather = {0:  "Ei merkittäviä sääilmiöitä",
@@ -226,7 +224,6 @@ weather = {0:  "Ei merkittäviä sääilmiöitä",
            86: "Kohtalaisia lumikuuroja",
            87: "Kovia lumikuuroja",
            89: "Raekuuroja mahdollisesti yhdessä vesi- tai räntäsateen kanssa"}
-
 
 urls          = get_connection_urls()
 station, data = fetch_data(urls)
