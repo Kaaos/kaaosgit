@@ -130,9 +130,12 @@ def print_observations(vlist, latest, station):
          '--' if ('n_man'    not in vlist) else str(int(vlist['n_man'][1])),    gettime(vlist['n_man'][0], latest)      if 'n_man'    in vlist else ''))
 
     # Print precipitation only if precipitation > 0:
-    if ('r_1h' in vlist or 'ri_10min' in vlist):
-        if (vlist['r_1h'][1] > 0.001 or vlist['ri_10min'][1] > 0.001):
+    if ('r_1h' in vlist):
+        if (vlist['r_1h'][1] > 0.001):
             print('\nEdeltävän tunnin sademäärä: %10.1f mm %s' % (vlist['r_1h'][1], gettime(vlist['r_1h'][0], latest)))
+
+    if ('ri_10min' in vlist):
+        if (vlist['ri_10min'][1] > 0.001):
             print('Edeltävän 10 minuutin sademäärä: %5.1f mm %s' % (vlist['ri_10min'][1], gettime(vlist['ri_10min'][0], latest)))
 
     # Print snow depth only if snow depth > 0:

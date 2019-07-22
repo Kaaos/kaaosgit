@@ -8,7 +8,52 @@ clouds = {"SKC": "Sky clear",
           "BKN": "Broken clouds",
           "OVC": "Overcast",
           "NSC": "No significant cloud",
-          "VV": "Vertical visibility"}
+          "VV" : "Vertical visibility",
+          "NCD": "Nil cloud detected"}
+
+precip = {'DZ': 'Drizzle', 
+          'GR': 'Hail', 
+          'GS': 'Snow pellets (granules)', 
+          'IC': 'Ice crystals', 
+          'PL': 'Pellets of ice',
+          'RA': 'Rain', 
+          'SG': 'Snow grains', 
+          'SN': 'Snow',
+          'UP': 'Unknown precipitation'}
+
+obscur = {'FG': 'Fog',
+          'BR': 'Mist',
+          'DU': 'Dust',
+          'SA': 'Sand',
+          'VA': 'Volcanic ash',
+          'HZ': 'Haze',
+          'FU': 'Smoke',
+          'PY': 'Spray'}
+
+desc = {'MI': 'Shallow',
+        'BC': 'Patches',
+        'BL': 'Blowing',
+        'TS': 'Thunderstorm',
+        'PR': 'Partial',
+        'DR': 'Low drifting',
+        'SH': 'Showers:',
+        'FZ': 'Freezing',
+        'VC': 'In the vicinity'}
+
+other = {'SQ': 'Squall',
+         'DS': 'Dust storm',
+         'FC': 'Funnel cloud',
+         'PO': 'Dust or sand whirls',
+         'SS': 'Sandstorm'}
+
+
+def get_intensity(input_str):
+    if ('-' in input_str):
+        return ' (light)'
+    elif ('+' in input_str):
+        return ' (heavy)'
+    else:
+        return ''
 
 
 def get_metar_string():
@@ -22,10 +67,6 @@ def get_metar_string():
         exit()
     metar_hel = str(metar_hel)
     return metar_hel.split("avi:input")[1][1:-2]
-
-
-def metarstring_to_list(metar):
-    return metar.split(" ")
 
 
 def is_number(inp):
@@ -47,11 +88,8 @@ def parse_visibility(vis):
     return ret
 
 
-def parse_time(timestamp):
-    return {"Raw timestamp": timestamp}
-
-
 def parse_wind(wind):
+    # Lisää MPS - arvot suoraan m/s
     if("G" in wind):
         temp = wind.split("G")
         return {"Wind Direction": float(wind[0:3]), "Wind Speed (m/s)": round((float(temp[0][3:]) * 0.514444444), 1), "Gusts (m/s)": round((float(temp[1][:-2]) * 0.514444444), 1)}
@@ -71,7 +109,9 @@ def parse_temperatures(temp):
 
 
 def parse_pressure(press):
-    return {"Pressure": float(press[1:])}
+    if ('=' in press):
+        press = press[:-1]
+    return {"Pressure": press[1:] + ' hPa'}
 
 
 def parse_cloudcovers(cloud):
@@ -85,14 +125,63 @@ def parse_cloudcovers(cloud):
 
 
 def decode_metar(metar):
-    metar_list = metarstring_to_list(metar)
+    metar_list = metar.split(' ')
+
     all_clouds = []
     all_vars = {}
+
+
+    if("METAR" in metar_list and metar_list[-1].endswith('=')):
+        all_vars['Site'] = metar_list[1]
+        all_vars['Date'] = metar_list[2][:2]
+        all_vars['Time'] = metar_list[2][2:][:2] + ':' + metar_list[2][2:][2:-1] + ' (UTC)'
+        all_vars.update(parse_wind(metar_list[3]))
+        all_vars.update(parse_visibility(metar_list[4]))
+
+
+        precipitation = [] 
+        obscurations = []
+
+        intensity = ''
+
+        for i in range(5, len(metar_list)):
+            intensity = ''
+
+            if (metar_list[i].startswith('-') or metar_list[i].startswith('+')):
+                intensity = get_intensity(metar_list[i])
+                metar_list[i] = metar_list[i][1:]
+                
+            if("/" in metar_list[i]):                                 # OK
+                all_vars.update(parse_temperatures(metar_list[i]))
+
+            elif(metar_list[i].startswith('Q')):                        # OK
+                all_vars.update(parse_pressure(metar_list[i]))
+
+            elif(metar_list[i][:3] in (list(clouds.keys())) or metar_list[i][:2] in (list(clouds.keys()))):
+                all_clouds.append(parse_cloudcovers(metar_list[i]))
+
+            elif(metar_list[i] in (list(obscur.keys()))):
+                all_vars['Obscurations'] = obscur[metar_list[i]] + intensity
+
+            elif(metar_list[i] in (list(precip.keys()))):
+                all_vars['Precipitation'] = precip[metar_list[i]] + intensity
+
+            elif(metar_list[i][:2] in (list(desc.keys())) and metar_list[i][2:4] in (list(precip.keys()))):
+                all_vars['Precipitation'] = desc[metar_list[i][:2]] + ' ' + precip[metar_list[i][2:4]]
+
+
+            # elif(i == "BECMG"):
+            # becoming = not becoming # not implemented yet --> becoming
+            elif(metar_list[i].startswith("NOSIG")):
+                all_vars.update({"Becoming": "No significant changes"})
+    else:
+        print("Input is not a valid METAR message: \t%s \nExiting." % metar)
+        exit()
+
+    '''
     if("METAR" in metar_list[0]):
         for i in metar_list:
-            if(i.endswith("Z")):
-                all_vars.update(parse_time(i))
-            elif(i.endswith("KT")):
+            if(i.endswith("KT")):
                 all_vars.update(parse_wind(i))
             elif(is_number(i) or i == "CAVOK"):
                 all_vars.update(parse_visibility(i))
@@ -100,7 +189,7 @@ def decode_metar(metar):
                 all_vars.update(parse_temperatures(i))
             elif("Q" in i):
                 all_vars.update(parse_pressure(i))
-            elif(i.startswith(("SKC", "NSC", "FEW", "SCT", "BKN", "OVC", "VV"))):
+            elif(i[:3] in (list(clouds.keys())) or i[:2] in (list(clouds.keys()))):
                 all_clouds.append(parse_cloudcovers(i))
             # elif(i == "BECMG"):
             # becoming = not becoming # not implemented yet --> becoming
@@ -109,6 +198,8 @@ def decode_metar(metar):
     else:
         print("Not a METAR message. Exiting.")
         exit()
+    '''
+
     return all_vars, all_clouds
 
 
@@ -117,12 +208,13 @@ def decode_metar(metar):
 #############
 
 
+
+
+
 metar_message = get_metar_string()
-"""
-metar_message = "METAR EFHK 161520Z 36010KT 9999 VCSH" \
-"FEW045CB VV055 BKN060 BKN160 01/M11 Q1011 BECMG NSC="
-"""
-print(metar_message, "\n")
+#metar_message = "METAR EFHK 161520Z 36010KT 9999 VCSH " \
+#"FEW045CB VV055 -RA +SN BKN060 BKN160 01/M11 Q1011 BECMG NSC="
+print('METAR:\n\t', metar_message, "\n")
 
 all_vars, all_clouds = decode_metar(metar_message)
 
