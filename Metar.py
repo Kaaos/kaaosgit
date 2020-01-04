@@ -96,6 +96,8 @@ def parse_wind(wind):
     elif("VRB" in wind):
         temp = wind.split("VRB")
         return {"Wind Direction": "Variable", "Wind Speed (m/s)": round((float(wind[3:-2]) * 0.514444444), 1)}
+    elif("V" in wind):
+        return {"Wind Direction": "Variable"}
     return {"Wind Direction": float(wind[0:3]), "Wind Speed (m/s)": round((float(wind[3:-2]) * 0.514444444), 1)}  # Return wind in m/s
 
 
@@ -136,7 +138,7 @@ def decode_metar(metar):
         all_vars['Date'] = metar_list[2][:2]
         all_vars['Time'] = metar_list[2][2:][:2] + ':' + metar_list[2][2:][2:-1] + ' (UTC)'
         all_vars.update(parse_wind(metar_list[3]))
-        all_vars.update(parse_visibility(metar_list[4]))
+        #all_vars.update(parse_visibility(metar_list[4]))
 
 
         precipitation = [] 
@@ -157,6 +159,9 @@ def decode_metar(metar):
             elif(metar_list[i].startswith('Q')):                        # OK
                 all_vars.update(parse_pressure(metar_list[i]))
 
+            elif("G" in metar_list[i] or "VRB" in metar_list[i] or "V" in metar_list[i]):
+                parse_wind(metar_list[i])
+
             elif(metar_list[i][:3] in (list(clouds.keys())) or metar_list[i][:2] in (list(clouds.keys()))):
                 all_clouds.append(parse_cloudcovers(metar_list[i]))
 
@@ -168,6 +173,9 @@ def decode_metar(metar):
 
             elif(metar_list[i][:2] in (list(desc.keys())) and metar_list[i][2:4] in (list(precip.keys()))):
                 all_vars['Precipitation'] = desc[metar_list[i][:2]] + ' ' + precip[metar_list[i][2:4]]
+
+            elif("V" in metar_list[i]):
+                all_vars['Wind direction'] = "Variable: " + str(metar_list[i].split("V")[0] + " - " + str(metar_list[i].split("V")[-1]))
 
 
             # elif(i == "BECMG"):

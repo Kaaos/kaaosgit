@@ -84,7 +84,7 @@ for i in [0, 2]:  # 0 & 2 = Stop group indexes, indexes to start a new print gro
 print()
 
 # Print possible alerts for routes above:
-if (len(data['data']['routes']) > 0):
+if (len(data['data']['routes']) > 1):
     print("\nPoikkeustiedotteet:\n")
 
 for i in range(len(data['data']['routes'])):
