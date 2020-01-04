@@ -28,8 +28,8 @@ ITRF2014_etrs89_2022_5 = {"cX":1.01673, "cY":1.22806, "cZ":-0.85601, "rX":-0.041
 #       e2 = First excentricity   #
 # # # # # # # # # # # # # # # # # #
 international_1924 = {"a":6378388, "b":6356911.9462, "e2":None}
-grs80 = {"a":6378137, "b":6356752.3141, "e2":0.00669438002290}
-wgs84 = {"a":6378137, "b":6356752.314245, "e2":None}
+grs80 = {"a":6378137, "b":6356752.3141,   "e2":0.00669438002290}
+wgs84 = {"a":6378137, "b":6356752.314245, "e2":0.00669437999014}
 
 
 # # # # # # # # #
@@ -118,7 +118,7 @@ def bursawolf(xyz, params):
     dx = params["cX"]
     dy = params["cY"]
     dz = params["cZ"]
-    s = params["s"]
+    s  = params["s"]
 
     rX = arcsec_to_rad(params["rX"])
     rY = arcsec_to_rad(params["rY"])
@@ -145,7 +145,7 @@ def helmert(xyz, params):
     dx = params["cX"]
     dy = params["cY"]
     dz = params["cZ"]
-    s = params["s"]
+    s  = params["s"]
 
     rX = arcsec_to_rad(params["rX"])
     rY = arcsec_to_rad(params["rY"])
