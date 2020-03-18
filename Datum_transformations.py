@@ -26,7 +26,9 @@ ITRF2014_etrs89_2022_5 = {"cX":1.01673, "cY":1.22806, "cZ":-0.85601, "rX":-0.041
 #       a  = Semimajor axis (m)   #
 #       b  = Semiminor axis (m)   #
 #       e2 = First excentricity   #
+#       f (flattening) = (a-b)/a  #
 # # # # # # # # # # # # # # # # # #
+
 international_1924 = {"a":6378388, "b":6356911.9462, "e2":None}
 grs80 = {"a":6378137, "b":6356752.3141,   "e2":0.00669438002290}
 wgs84 = {"a":6378137, "b":6356752.314245, "e2":0.00669437999014}
@@ -53,7 +55,7 @@ def geodetic_to_cartesian(ellipsoid, lat, lon, height):
     ycoord = (n + height) * cos_latitude * sin_longitude
     zcoord = ((b**2 / a**2 * n) + height) * sin_latitude
 
-    return(xcoord, ycoord, zcoord)
+    return (xcoord, ycoord, zcoord)
 
 
 # Converts 3D cartesian coordinates to geodetic coordinates:
@@ -106,9 +108,9 @@ def arcsec_to_rad(sec):
 
 # Bursa-Wolf 7-parameter transform
 # Transforms 3D cartesian coordinates
-# Input: (x, y, z) coordinates, parameter dictionary
+# Input: (x, y, z) coordinates, parameter dictionary, formula:
     #   |Xb|             | 1     rZ   -rY|   |Xa|   |dx|
-    #   |Yb| = (1 + m) * |-rZ    1     rX| . |Ya| + |dy|
+    #   |Yb| = (1 + m) * |-rZ    1     rX| * |Ya| + |dy|
     #   |Zb|             | rY   -rX    1 |   |Za|   |dz|
 def bursawolf(xyz, params):
     Xa = xyz[0]
@@ -133,9 +135,9 @@ def bursawolf(xyz, params):
 
 # Helmert 7-parameter transform
 # Transforms 3D cartesian coordinates
-# Input: (x, y, z) coordinates, parameter dictionary
+# Input: (x, y, z) coordinates, parameter dictionary, formula:
     #   |Xb|             |1      -rZ   rY|   |Xa|   |dx|
-    #   |Yb| = (1 + m) * |rZ      1   -rX| . |Ya| + |dy|
+    #   |Yb| = (1 + m) * |rZ      1   -rX| * |Ya| + |dy|
     #   |Zb|             |-rY    rX    1 |   |Za|   |dz|
 def helmert(xyz, params):
     Xa = xyz[0]
@@ -158,6 +160,23 @@ def helmert(xyz, params):
     return (Xb, Yb, Zb)
 
 
+# Affine 2D
+    # x2 =dx+a1x1 +a2y1 
+    # y2 =dy+b1x1 +b2y1
+def affine2d(xcoord, ycoord, params):
+    dx = params["dx"]
+    dy = params["dy"]
+    a1 = params["a1"]
+    a2 = params["a2"]
+    b1 = params["b1"]
+    b2 = params["b2"]
+
+    Xb = dx + a1 * xcoord + a2 * ycoord 
+    Yb = dy + b1 * xcoord + b2 * ycoord
+
+    return (Xb, Yb)
+
+
 # # # # # # # # # # # # # # # # # #
 #   Main (under construction)     #
 # # # # # # # # # # # # # # # # # #
@@ -165,10 +184,18 @@ def helmert(xyz, params):
     # For example Geodetic (input) --> Cartesian 3D --> Bursa-wolf --> Geodetic (output)
 
 # Random tests:
-bursawolfresult = bursawolf((3565285.0000, 855949.0000, 5201383.0000), ITRF2014_etrs89_2022_5)
+#bursawolfresult = bursawolf((3565285.0000, 855949.0000, 5201383.0000), ITRF2014_etrs89_2022_5)
 
-print("\nCartesian input: 65.432112345, 24.987654321, 987.456789")
-result_cartesian = geodetic_to_cartesian(grs80, 65.432112345, 24.987654321, 987.456789)
-result = cartesian_to_geodetic(grs80, result_cartesian[0], result_cartesian[1], result_cartesian[2])
-print("Cartesian 3D:", result_cartesian)
-print("Back to geodetic:", result)
+#print("\nCartesian input: 65.432112345, 24.987654321, 987.456789")
+#result_cartesian = geodetic_to_cartesian(grs80, 65.432112345, 24.987654321, 987.456789)
+#result = cartesian_to_geodetic(grs80, result_cartesian[0], result_cartesian[1], result_cartesian[2])
+#print("Cartesian 3D:", result_cartesian)
+#print("Back to geodetic:", result)
+
+sijainti_itrf = (60.196420, 24.960322, 20.0)
+sijainti_cartesian = geodetic_to_cartesian(grs80, sijainti_itrf[0], sijainti_itrf[1], sijainti_itrf[2])
+sijainti_kkj = bursawolf(sijainti_cartesian, euref_fin_kkj)
+kkj_geodetic = cartesian_to_geodetic(international_1924, sijainti_kkj[0], sijainti_kkj[1], sijainti_kkj[2])
+
+print("ETRS:", sijainti_itrf)
+print("KKJ:", kkj_geodetic)
