@@ -5,7 +5,7 @@ from datetime import datetime
 # Get up-to-date NCOV-19 data (Finland). Uses HS open data.
 try:
     http = urllib3.PoolManager()
-    url = http.request('GET', 'https://w3qa5ydb4l.execute-api.eu-west-1.amazonaws.com/prod/finnishCoronaData')
+    url = http.request('GET', 'https://w3qa5ydb4l.execute-api.eu-west-1.amazonaws.com/prod/finnishCoronaData/v2')
     data = json.loads(url.data)
 except Exception as e:
     #raise e
@@ -47,4 +47,4 @@ for i in range(0, len(caselist)):
 if (sum(deathcount) > 0):
     print("\n\nKuolleet: (N=" + str(sum(deathcount)) + ")\n------")
     for i in range(0, len(deathlist)):
-        print("%-18s %6d" % (deathlist[i], deathcount[i]))
+        print("%-18s %6d" % (deathlist[i] if deathlist[i] is not None else "-", deathcount[i]))
