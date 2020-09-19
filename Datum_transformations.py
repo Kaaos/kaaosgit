@@ -9,11 +9,11 @@ import math
 # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # Helmert:
-    # Finnish (old) KKJ datum - EUREF-FIN (parameters from JHS197 Appendix 6)
+    # Finnish (old) KKJ datum - EUREF-FIN (parameters from JHS197 Appendix 6), Coordinate Frame rotation
 kkj_euref_fin = {"cX":-96.0617, "cY":-82.4278, "cZ":-121.7535, "rX":-4.80107, "rY":-0.34543, "rZ":1.37646,   "s":1.49640 }
 euref_fin_kkj = {"cX":96.0610,  "cY":82.4298,  "cZ":121.7485,  "rX":4.80109,  "rY":0.34546,  "rZ": -1.37645, "s":-1.49651}
 
-    # ITRF2014 to ETRS89 in different epochs, Baltic Sea area
+    # ITRF2014 to ETRS89 in different epochs, Baltic Sea area, Coordinate Frame rotation
     # See https://www.lantmateriet.se/contentassets/bbc47979dfef4f338e3c4f8b139da2fb/simplified-transformations-between-itrf2014-and-etrs89-for-maritime-applications.pdf
 ITRF2014_etrs89_2015_5 = {"cX":0.73384, "cY":0.88328, "cZ":-0.62780, "rX":-0.029958, "rY":0.014279, "rZ":0.028179, "s":-0.00958}
 ITRF2014_etrs89_2020_5 = {"cX":0.93597, "cY":1.12966, "cZ":-0.79088, "rX":-0.038216, "rY":0.019882, "rZ":0.034665, "s":-0.01310}
