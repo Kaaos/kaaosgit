@@ -8,7 +8,7 @@ import math
 #       Scale (s):                    PPM           #
 # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# Bursa-Wolf:
+# Helmert:
     # Finnish (old) KKJ datum - EUREF-FIN (parameters from JHS197 Appendix 6)
 kkj_euref_fin = {"cX":-96.0617, "cY":-82.4278, "cZ":-121.7535, "rX":-4.80107, "rY":-0.34543, "rZ":1.37646,   "s":1.49640 }
 euref_fin_kkj = {"cX":96.0610,  "cY":82.4298,  "cZ":121.7485,  "rX":4.80109,  "rY":0.34546,  "rZ": -1.37645, "s":-1.49651}
@@ -106,40 +106,18 @@ def arcsec_to_rad(sec):
     return sec / (60 * 60 * 180 / math.pi)
 
 
-# Bursa-Wolf 7-parameter transform
-# Transforms 3D cartesian coordinates
-# Input: (x, y, z) coordinates, parameter dictionary, formula:
-    #   |Xb|             | 1     rZ   -rY|   |Xa|   |dx|
-    #   |Yb| = (1 + m) * |-rZ    1     rX| * |Ya| + |dy|
-    #   |Zb|             | rY   -rX    1 |   |Za|   |dz|
-def bursawolf(xyz, params):
-    Xa = xyz[0]
-    Ya = xyz[1]
-    Za = xyz[2]
-
-    dx = params["cX"]
-    dy = params["cY"]
-    dz = params["cZ"]
-    s  = params["s"]
-
-    rX = arcsec_to_rad(params["rX"])
-    rY = arcsec_to_rad(params["rY"])
-    rZ = arcsec_to_rad(params["rZ"])
-
-    Xb = (1 + s * 10**-6) * (Xa + rZ * Ya - rY * Za)  + dx
-    Yb = (1 + s * 10**-6) * (-rZ * Xa + Ya + rX * Za) + dy
-    Zb = (1 + s * 10**-6) * (rY * Xa - rX * Ya + Za)  + dz
-
-    return (Xb, Yb, Zb)
-
-
 # Helmert 7-parameter transform
 # Transforms 3D cartesian coordinates
 # Input: (x, y, z) coordinates, parameter dictionary, formula:
-    #   |Xb|             |1      -rZ   rY|   |Xa|   |dx|
-    #   |Yb| = (1 + m) * |rZ      1   -rX| * |Ya| + |dy|
-    #   |Zb|             |-rY    rX    1 |   |Za|   |dz|
-def helmert(xyz, params):
+    # Rotation convention = Position Vector:
+        #   |Xb|             |1      -rZ   rY|   |Xa|   |dx|
+        #   |Yb| = (1 + m) * |rZ      1   -rX| * |Ya| + |dy|
+        #   |Zb|             |-rY    rX    1 |   |Za|   |dz|
+    # Rotation convention = Coordinate Frame:
+        #   |Xb|             | 1     rZ   -rY|   |Xa|   |dx|
+        #   |Yb| = (1 + m) * |-rZ    1     rX| * |Ya| + |dy|
+        #   |Zb|             | rY   -rX    1 |   |Za|   |dz|
+def helmert(xyz, params, convention):
     Xa = xyz[0]
     Ya = xyz[1]
     Za = xyz[2]
@@ -153,9 +131,18 @@ def helmert(xyz, params):
     rY = arcsec_to_rad(params["rY"])
     rZ = arcsec_to_rad(params["rZ"])
 
-    Xb = (1 + s * 10**-6) * (Xa - rZ * Ya + rY * Za)   + dx
-    Yb = (1 + s * 10**-6) * (rZ * Xa + Ya - rX * Za)   + dy
-    Zb = (1 + s * 10**-6) * (-rY * Xa + rX * Ya + Za)  + dz
+    Xb = 0.0
+    Yb = 0.0
+    Zb = 0.0
+
+    if (convention == "Position Vector"):
+        Xb = (1 + s * 10**-6) * (Xa - rZ * Ya + rY * Za)  + dx
+        Yb = (1 + s * 10**-6) * (rZ * Xa + Ya - rX * Za)  + dy
+        Zb = (1 + s * 10**-6) * (-rY * Xa + rX * Ya + Za) + dz
+    elif (convention == "Coordinate Frame"):
+        Xb = (1 + s * 10**-6) * (Xa + rZ * Ya - rY * Za)  + dx
+        Yb = (1 + s * 10**-6) * (-rZ * Xa + Ya + rX * Za) + dy
+        Zb = (1 + s * 10**-6) * (rY * Xa - rX * Ya + Za)  + dz
 
     return (Xb, Yb, Zb)
 
@@ -181,21 +168,12 @@ def affine2d(xcoord, ycoord, params):
 #   Main (under construction)     #
 # # # # # # # # # # # # # # # # # #
 
-    # For example Geodetic (input) --> Cartesian 3D --> Bursa-wolf --> Geodetic (output)
+    # For example Geodetic (input) --> Cartesian 3D --> Helmert --> Geodetic (output)
 
-# Random tests:
-#bursawolfresult = bursawolf((3565285.0000, 855949.0000, 5201383.0000), ITRF2014_etrs89_2022_5)
+etrf = (60.196420, 24.960322, 20.0)
+cartesian = geodetic_to_cartesian(grs80, etrf[0], etrf[1], etrf[2])
+kkj = helmert(cartesian, euref_fin_kkj, "Coordinate Frame")
+kkj_geodetic = cartesian_to_geodetic(international_1924, kkj[0], kkj[1], kkj[2])
 
-#print("\nCartesian input: 65.432112345, 24.987654321, 987.456789")
-#result_cartesian = geodetic_to_cartesian(grs80, 65.432112345, 24.987654321, 987.456789)
-#result = cartesian_to_geodetic(grs80, result_cartesian[0], result_cartesian[1], result_cartesian[2])
-#print("Cartesian 3D:", result_cartesian)
-#print("Back to geodetic:", result)
-
-sijainti_itrf = (60.196420, 24.960322, 20.0)
-sijainti_cartesian = geodetic_to_cartesian(grs80, sijainti_itrf[0], sijainti_itrf[1], sijainti_itrf[2])
-sijainti_kkj = bursawolf(sijainti_cartesian, euref_fin_kkj)
-kkj_geodetic = cartesian_to_geodetic(international_1924, sijainti_kkj[0], sijainti_kkj[1], sijainti_kkj[2])
-
-print("ETRS:", sijainti_itrf)
+print("ETRF:", etrf)
 print("KKJ:", kkj_geodetic)

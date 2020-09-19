@@ -132,14 +132,11 @@ def decode_metar(metar):
     all_clouds = []
     all_vars = {}
 
-
     if("METAR" in metar_list and metar_list[-1].endswith('=')):
         all_vars['Site'] = metar_list[1]
         all_vars['Date'] = metar_list[2][:2]
         all_vars['Time'] = metar_list[2][2:][:2] + ':' + metar_list[2][2:][2:-1] + ' (UTC)'
         all_vars.update(parse_wind(metar_list[3]))
-        #all_vars.update(parse_visibility(metar_list[4]))
-
 
         precipitation = [] 
         obscurations = []
@@ -155,6 +152,9 @@ def decode_metar(metar):
                 
             if("/" in metar_list[i]):                                 # OK
                 all_vars.update(parse_temperatures(metar_list[i]))
+
+            elif(metar_list[i].startswith("NOSIG")):
+                all_vars.update({"Becoming": "No significant changes"})
 
             elif(metar_list[i].startswith('Q')):                        # OK
                 all_vars.update(parse_pressure(metar_list[i]))
@@ -177,51 +177,14 @@ def decode_metar(metar):
             elif("V" in metar_list[i]):
                 all_vars['Wind direction'] = "Variable: " + str(metar_list[i].split("V")[0] + " - " + str(metar_list[i].split("V")[-1]))
 
-
-            # elif(i == "BECMG"):
-            # becoming = not becoming # not implemented yet --> becoming
-            elif(metar_list[i].startswith("NOSIG")):
-                all_vars.update({"Becoming": "No significant changes"})
     else:
         print("Input is not a valid METAR message: \t%s \nExiting." % metar)
         exit()
 
-    '''
-    if("METAR" in metar_list[0]):
-        for i in metar_list:
-            if(i.endswith("KT")):
-                all_vars.update(parse_wind(i))
-            elif(is_number(i) or i == "CAVOK"):
-                all_vars.update(parse_visibility(i))
-            elif("/" in i):
-                all_vars.update(parse_temperatures(i))
-            elif("Q" in i):
-                all_vars.update(parse_pressure(i))
-            elif(i[:3] in (list(clouds.keys())) or i[:2] in (list(clouds.keys()))):
-                all_clouds.append(parse_cloudcovers(i))
-            # elif(i == "BECMG"):
-            # becoming = not becoming # not implemented yet --> becoming
-            elif(i.startswith("NOSIG")):
-                all_vars.update({"Becoming": "No significant changes"})
-    else:
-        print("Not a METAR message. Exiting.")
-        exit()
-    '''
-
     return all_vars, all_clouds
 
 
-#############
-#############
-#############
-
-
-
-
-
 metar_message = get_metar_string()
-#metar_message = "METAR EFHK 161520Z 36010KT 9999 VCSH " \
-#"FEW045CB VV055 -RA +SN BKN060 BKN160 01/M11 Q1011 BECMG NSC="
 print('METAR:\n\t', metar_message, "\n")
 
 all_vars, all_clouds = decode_metar(metar_message)
