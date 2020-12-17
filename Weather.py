@@ -114,17 +114,17 @@ def printvars(variable_dict):
 def print_observations(vlist, latest, station):
     print('\n%s, Helsinki %s' % (station, latest.strftime('%d/%m/%Y %H:%M')))
 
-    print('Lämpötila: %6s °C %7s  Tuulen nopeus: %5s m/s %7s   Paine: %10s hPa %7s' % 
+    print('Lämpötila: %6s °C  %7s  Tuulen nopeus: %5s m/s %7s   Paine: %10s hPa %7s' % 
         ('--' if ('t2m'      not in vlist) else str(vlist['t2m'][1]),      gettime(vlist['t2m'][0], latest)         if 't2m'      in vlist else '',
          '--' if ('ws_10min' not in vlist) else str(vlist['ws_10min'][1]), gettime(vlist['ws_10min'][0], latest)    if 'ws_10min' in vlist else '',
          '--' if ('p_sea'    not in vlist) else str(vlist['p_sea'][1]),    gettime(vlist['p_sea'][0], latest)       if 'p_sea'    in vlist else ''))
 
-    print('Kastepiste: %5s °C %7s   Puuska: %11s m/s %7s   Näkyvyys: %7s km %8s' % 
+    print('Kastepiste: %5s °C  %7s  Puuska: %12s m/s %7s   Näkyvyys: %7s km %8s' % 
         ('--' if ('td'       not in vlist) else str(vlist['td'][1]),         gettime(vlist['td'][0], latest)        if 'td'       in vlist else '',
          '--' if ('wg_10min' not in vlist) else str(vlist['wg_10min'][1]),   gettime(vlist['wg_10min'][0], latest)  if 'wg_10min' in vlist else '', 
          '--' if ('vis'      not in vlist) else str(vlist['vis'][1] / 1000), gettime(vlist['vis'][0], latest)       if 'vis'      in vlist else ''))
 
-    print('Kosteus: %8s %% %8s   Tuulen suunta: %4s ° %9s   Pilvisyys: %4s/8 %11s' % 
+    print('Kosteus: %8s %%  %8s  Tuulen suunta: %5s ° %9s   Pilvisyys: %4s/8 %11s' % 
         ('--' if ('rh'       not in vlist) else str(int(vlist['rh'][1])),       gettime(vlist['rh'][0], latest)         if 'rh'       in vlist else '',
          '--' if ('wd_10min' not in vlist) else str(int(vlist['wd_10min'][1])), gettime(vlist['wd_10min'][0], latest)   if 'wd_10min' in vlist else '',
          '--' if ('n_man'    not in vlist) else str(int(vlist['n_man'][1])),    gettime(vlist['n_man'][0], latest)      if 'n_man'    in vlist else ''))
