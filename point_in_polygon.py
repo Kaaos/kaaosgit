@@ -51,11 +51,11 @@ def point_in_polygon(point_wkt, polygon_wkt):
     counter = 0     # Winding number counter
     ret = True      # Return value
 
-    # Convert point WKT to tuples:
+    # Convert WKT geometries to tuples:
     point = geometryparser(point_wkt)
     polygon = geometryparser(polygon_wkt)
 
-    # Bounding box check to rule out obvious cases:
+    # Bounding box check to rule out obvious (outside-) cases:
     xarray = []     # Array to hold polygon x-coordinates
     yarray = []     # Array to hold polygon y-coordinates
 
@@ -64,15 +64,14 @@ def point_in_polygon(point_wkt, polygon_wkt):
         xarray.append(i[0])
         yarray.append(i[1])
 
-    # Bounding box is ((minx, miny), (maxx, maxy))
+    # Bounding box: ((minx, miny), (maxx, maxy))
     bbox = ((min(xarray), min(yarray)), (max(xarray), max(yarray)))
 
-    # Check if point is outside bounding box:
+    # If point is outside of bounding box, return False:
     if (point[0] < bbox[0][0] or point[0] > bbox[1][0] or point[1] < bbox[0][1] or point[1] > bbox[1][1]):
-        #print("Point is outside bounding box: ", bbox)
         return False
 
-    # Point is inside bounding box, check using winding number algorithm:
+    # Point is known to be inside bounding box, make final check using winding number algorithm:
     for i in range(len(polygon) - 1):
         if (polygon[i][1] <= point[1]):                             # Polygon vertex Y <= Point Y
             if (polygon[i+1][1]  > point[1]):
