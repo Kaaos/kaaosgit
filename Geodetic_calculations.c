@@ -2,9 +2,11 @@
 #include <stdlib.h>
 #include <math.h>
 
+// Compile for example like: gcc -O3 -march=native -Wall -Wextra -Wfloat-equal -Werror -pedantic -std=c17 -o geodetic_calculations Geodetic_calculations.c
 
 // Function prototypes (forward declarations):
 void print_menu(void);
+void clearScreen(void);
 int int_input(const int lower, const int upper, const char *text);
 double double_input(const double lower, const double upper, const char *text);
 double double_input_no_check(const char *input_text, const char *error_text);
@@ -22,7 +24,7 @@ void utm_scale_error_at_point(void);
 */
 int main(void) {
     int ret;
-    system("clear");
+    clearScreen();
     const char *choose = "Choose operation by number: ";
     
     while (1) {
@@ -30,27 +32,27 @@ int main(void) {
         ret = int_input(1, 8, choose);
         switch (ret) {
             case 1:
-                system("clear");
+                clearScreen();
                 dms_to_dd();
                 break;
             case 2:
-                system("clear");
+                clearScreen();
                 dd_to_dms();
                 break;
             case 3:
-                system("clear");
+                clearScreen();
                 normal_gravity();
                 break;
             case 4:
-                system("clear");
+                clearScreen();
                 geodetic_to_cartesian();
                 break;
             case 5:
-                system("clear");
+                clearScreen();
                 cartesian_to_geodetic();
                 break;
             case 6:
-                system("clear");
+                clearScreen();
                 utm_scale_error_distance();
                 break;
         }
@@ -76,6 +78,15 @@ void print_menu(void) {
         \n6. UTM Scale error by easting \
         \n7. Exit \
         \n");
+}
+
+
+/*
+*   Function to clear the screen.
+*   - Somewhat portable, somewhat ugly
+*/
+void clearScreen(void) {
+    system("clear||cls");
 }
 
 
@@ -174,7 +185,7 @@ void dms_to_dd(void) {
         result *= -1;
     }
 
-    printf("\nResult in decimal degrees: %lf°\n", result);
+    printf("\nResult in decimal degrees: %lf°\n\n", result);
 }
 
 
@@ -208,7 +219,7 @@ void dd_to_dms(void) {
     }
 
     printf("\nResult: %d° %d' %lf\"\n", deg, min, sec);
-    printf("DMS: %d %d %lf\n", deg, min, sec);
+    printf("DMS: %d %d %lf\n\n", deg, min, sec);
 }
 
 
@@ -232,8 +243,8 @@ void normal_gravity(void) {
        (0.0000232718 * (pow(sin_lat, 4))) + (0.0000001262 * 
         (pow(sin_lat, 6))) + (0.0000000007 * (pow(sin_lat, 8))));
 
-    printf("\nOn latitude φ = %f° normal gravity on GRS80 ellipsoid is %f mgal.\n
-            Gravitational acceleration is %f m/s².\n", latitude, g, g / 100000);
+    printf("\nOn latitude φ = %f° normal gravity on GRS80 ellipsoid is %f mgal. \
+        \nGravitational acceleration is %f m/s².\n\n", latitude, g, g / 100000);
 }
 
 
@@ -251,8 +262,8 @@ void geodetic_to_cartesian(void) {
     const char *heightinputerror = "Invalid input. Enter height in meters: ";
 
     printf("Converts geodetic coordinates (λ, φ, h) to 3D cartesian (X, Y, Z) coordinates. \
-        \nEnter degrees as decimal degrees and height as ellipsoidal height. North positive, 
-        East positive / GRS80 ellipsoid.\n");
+        \nEnter degrees as decimal degrees and height as ellipsoidal height. \
+        \nNorth positive, East positive / GRS80 ellipsoid.\n\n");
 
     double latitude = double_input(-90, 90, latitudeinput);
     double longitude = double_input(-180, 180, longitudeinput);
@@ -271,7 +282,7 @@ void geodetic_to_cartesian(void) {
     double zcoord = ((pow(b, 2) / pow(a, 2) * n) + height) * sin_latitude;
 
     // Print cartesian coordinates rounded to 1mm accuracy:
-    printf("X = %.3f\nY = %.3f\nZ = %.3f\n", xcoord, ycoord, zcoord);
+    printf("\nX = %.3f\nY = %.3f\nZ = %.3f\n\n", xcoord, ycoord, zcoord);
 }
 
 
@@ -328,9 +339,8 @@ void cartesian_to_geodetic(void) {
         count++;
     }
 
-    printf("Iterations completed: %d\n", count);
-    printf("Latitude φ: %f\nLongitude λ: %f\nEllipsoidal height h: %.3f\n", 
-            latitude, longitude, height);
+    printf("\nIterations completed: %d\n", count);
+    printf("Latitude φ: %f\nLongitude λ: %f\nEllipsoidal height h: %.3f\n\n", latitude, longitude, height);
 }
 
 
@@ -345,6 +355,6 @@ void utm_scale_error_distance(void) {
     // UTM scale error:
     double scale_err = -0.0004 + (12.29 * pow(10, -15) * pow((E - E0), 2));
 
-    printf("\nEasting: %.3f (m)\nDistance from the central meridian: %.6f km \n
-            Scale error: %.2f PPM\n\n", E, (E - E0) / 1000.0, scale_err * 1000000);
+    printf("\nEasting: %.3f (m)\nDistance from the central meridian: %.6f km \
+        \nScale error: %.2f PPM\n\n", E, (E - E0) / 1000.0, scale_err * 1000000);
 }
