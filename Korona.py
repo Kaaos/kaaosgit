@@ -1,3 +1,5 @@
+# Get and print current number of COVID-19 infections and related deaths in Finland
+
 import urllib3
 import json
 from datetime import datetime
@@ -8,7 +10,6 @@ try:
     url = http.request('GET', 'https://w3qa5ydb4l.execute-api.eu-west-1.amazonaws.com/prod/finnishCoronaData/v2/')
     data = json.loads(url.data)
 except Exception as e:
-    #raise e
     print("Could not get the data.\n")
     exit()
 
