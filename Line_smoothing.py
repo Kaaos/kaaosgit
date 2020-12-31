@@ -19,14 +19,11 @@ def visvalingam(wkt, epsilon):
 
         # Loop through all vertices:
         for i in range(len(line) - 2):  # -2 due to need of +2 vertices to create triangle
-            
             vertex_index = i + 1        # Vertex "responsible for area" - middle vertex of three
             area = get_area(line[i], line[i+1], line[i+2])
-
             if (area < min_area):
                 min_area = area
                 min_area_index = i + 1  # Vertex to possibly be removed
-
         if (min_area < epsilon and min_area_index is not None and len(line) >= 3):
             line = pop_vertex(line, min_area_index)
         else:
@@ -55,7 +52,6 @@ def pop_vertex(line, index):
 
 
 # Douglas-Peucker algorithm
-# TODO
 def douglas_peucker(wkt, epsilon):
     # TODO
     pass
@@ -64,7 +60,7 @@ def douglas_peucker(wkt, epsilon):
 # Parses WKT geometries to point tuples ((x,y), (x,y), (x,y), ...)
 def geometryparser(wkt):
     ret = None
-    if (wkt[:10].upper() == "LINESTRING"):  # Only linestrings allowed
+    if (wkt[:10].upper() == "LINESTRING"):  # Only linestrings allowed (needed)
         tmp_array = []
         ret = wkt[10:].strip("() ").replace("(", "").replace(")", "")
         for i in ret.split(","):
