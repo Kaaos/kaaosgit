@@ -8,16 +8,12 @@
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
-from dateutil import tz
 import pytz
 import fnmatch
 
 
 # Get urls to fetch the data from
 def get_connection_urls():
-    utc_zone   = tz.tzutc()
-    local_zone = tz.tzlocal()
-
     time = datetime.utcnow() + timedelta(hours = -1.17)     # Last hour
     time_iso = time.isoformat()                             # To ISO format
     time_obs = time_iso[:-7] + 'Z'                          # Timestamp must be like '2016-09-21T17:30:45Z'
@@ -66,8 +62,9 @@ def fetch_data(urls):
 
 # Parse GML data to a dictionary:
 def parse_data(data):
-    root = ET.fromstring(data)  # XML/GML parser root
-    ret  = {}                   # Empty dictionary for observation variables
+    root = ET.fromstring(data)              # XML/GML parser root
+    ret  = {}                               # Empty dictionary for observation variables
+    tz = pytz.timezone('Europe/Helsinki')   # Parse results in Finnish time
 
     # Get observations:
     variables = root.findall('.//wml2:MeasurementTimeseries', namespaces)
@@ -77,7 +74,7 @@ def parse_data(data):
         for i in observations:
             if (i[1].text != 'NaN'):                                                # Don't save missing data
                 time = datetime.strptime(i[0].text, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo = pytz.UTC)
-                time = time.astimezone(tz.tzlocal())
+                time=time.astimezone(tz)
                 value = float(i[1].text)
                 ret[varname] = [time, value]                                        # Save observation time and value
 
@@ -112,7 +109,7 @@ def printvars(variable_dict):
 
 # Function to print observations on the screen:
 def print_observations(vlist, latest, station):
-    print('\n%s, Helsinki %s' % (station, latest.strftime('%d/%m/%Y %H:%M')))
+    print('%s, Helsinki %s' % (station, latest.strftime('%d/%m/%Y %H:%M')))
 
     print('Lämpötila: %6s °C  %7s  Tuulen nopeus: %5s m/s %7s   Paine: %10s hPa %7s' % 
         ('--' if ('t2m'      not in vlist) else str(vlist['t2m'][1]),      gettime(vlist['t2m'][0], latest)         if 't2m'      in vlist else '',
